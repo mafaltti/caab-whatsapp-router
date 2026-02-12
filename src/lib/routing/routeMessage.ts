@@ -183,6 +183,41 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
       done = flowResult.done;
     }
 
+    // Handle _handoff_flow from unknown conversational flow
+    if (nextState.data._handoff_flow) {
+      const handoffFlow = nextState.data._handoff_flow as string;
+
+      logger.info({
+        correlation_id: correlationId,
+        event: "flow_transition",
+        user_id: message.userId,
+        instance: message.instanceName,
+        from_flow: "unknown",
+        flow: handoffFlow,
+        reason: "handoff_from_unknown",
+      });
+
+      const handoffResult = await executeFlow({
+        state: {
+          userId: message.userId,
+          instance: message.instanceName,
+          activeFlow: handoffFlow,
+          activeSubroute: null,
+          step: "start",
+          data: {},
+          updatedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        message,
+        chatHistory,
+        correlationId,
+      });
+
+      reply = reply + "\n\n" + handoffResult.reply;
+      nextState = handoffResult.nextState;
+      done = handoffResult.done;
+    }
+
     // Persist session state
     if (done) {
       await clearSession(message.userId);

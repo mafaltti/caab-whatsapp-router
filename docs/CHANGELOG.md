@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Conversational Unknown Flow
+#### Changed
+- Unknown flow steps (`src/lib/flows/unknown/steps.ts`): replaced static numbered menu with free-form LLM conversational loop. `handleStart` calls conversational LLM + `classifyFlow()` — if a non-unknown flow is detected (>= 0.80 confidence), hands off immediately via `_handoff_flow` convention; otherwise replies naturally and transitions to `awaiting_reply`. `handleAwaitingReply` repeats the dual-call pattern each turn; after 5 turns without resolving intent, falls back to the static menu. LLM failures at any point gracefully degrade to the static menu with `done: true`
+- Unknown flow definition (`src/lib/flows/unknown/flow.ts`): registered `awaiting_reply` step alongside `start`
+- Routing orchestrator (`src/lib/routing/routeMessage.ts`): added `_handoff_flow` convention — after `executeFlow()` returns, checks `nextState.data._handoff_flow`; if present, re-executes with the target flow in the same message cycle so the user seamlessly enters the new flow without repeating themselves. Reply from the unknown flow is concatenated with the handoff flow's reply
+
+#### Added
+- Conversational prompts (`src/lib/llm/prompts.ts`): `unknownConversationSystemPrompt()` (Portuguese, instructs LLM to act as friendly CAAB WhatsApp assistant, keep replies short, never mention being AI, return JSON `{"reply": "..."}`) and `unknownConversationUserPrompt(text, chatHistory)`
+
 ### Phase 6 — Digital Certificate Flow Implementation
 #### Added
 - Field validators (`src/lib/flows/digitalCertificate/validation.ts`): `isValidCpf` (11 digits, not all same), `isValidCnpj` (14 digits, not all same), `isValidCpfCnpj` (dispatches by person type), `isValidEmail` (@ with domain), `isValidPhone` (10–11 digits). MVP length checks only — no mathematical check-digit validation
