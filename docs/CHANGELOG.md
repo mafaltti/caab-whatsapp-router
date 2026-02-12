@@ -10,6 +10,19 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-02-12
 
+### Phase 4 — Routing Layer A: Topic Shift + Global Flow Selection
+#### Added
+- LLM Zod schemas (`src/lib/llm/schemas.ts`): `FLOW_VALUES` const array, `FlowType`, `GlobalRouterSchema`, confidence thresholds (`CONFIDENCE_ACCEPT=0.80`, `CONFIDENCE_CLARIFY=0.60`)
+- Prompt templates (`src/lib/llm/prompts.ts`): Portuguese system/user prompts for global router and topic shift, `formatChatHistory()` helper
+- Groq LLM client (`src/lib/llm/client.ts`): `callLlm()` with round-robin key rotation across `GROQ_API_KEYS`, automatic retry on 429 (next key), `response_format: json_object`, 8s timeout, structured logging (`llm_call`, `llm_rate_limited`, `llm_call_error`)
+- Global flow classifier (`src/lib/llm/globalRouter.ts`): `classifyFlow()` — never throws, validates LLM JSON with Zod, returns `{ flow: "unknown", confidence: 0 }` fallback on any error
+- Topic shift detector (`src/lib/llm/topicShift.ts`): `detectTopicShift()` — two-tier detection: Tier 1 rule-based keyword matching (accent-insensitive via NFD normalization) for instant classification, Tier 2 LLM fallback only when keywords inconclusive. Favors continuity on ambiguous results
+- Routing orchestrator (`src/lib/routing/routeMessage.ts`): `routeMessage()` — loads chat history, routes new sessions via `classifyFlow` and existing sessions via `detectTopicShift`, upserts session state, sends placeholder reply per flow, persists outbound message (fire-and-forget). Never throws — top-level catch sends error message to user
+- Barrel exports for `llm` and `routing` modules
+
+#### Changed
+- Webhook route (`src/app/api/webhook/evolution/route.ts`): replaced Phase 4/5 TODO stubs with `await routeMessage({ message, session, correlationId })`
+
 ### Phase 3 — Processing Pipeline (Dedupe + Session Load)
 #### Changed
 - Webhook route (`src/app/api/webhook/evolution/route.ts`): wired `insertInboundIfNew` for message deduplication (duplicate webhooks return 200 with no further processing) and `getSession` for session loading (handles expired sessions as new users). All DB errors return 200 to prevent Evolution retry storms. Added `performance.now()` duration tracking for DB latency monitoring.

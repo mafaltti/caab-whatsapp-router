@@ -3,6 +3,7 @@ import { logger, generateCorrelationId } from "@/lib/shared";
 import { normalizeMessage, applyGuards } from "@/lib/webhook";
 import { sendText } from "@/lib/evolution";
 import { insertInboundIfNew, getSession, type SessionState } from "@/lib/db";
+import { routeMessage } from "@/lib/routing";
 
 export async function POST(request: Request) {
   const correlationId = generateCorrelationId();
@@ -147,9 +148,8 @@ export async function POST(request: Request) {
       duration_ms: sessionDuration,
     });
 
-    // TODO Phase 4: Route message (globalRouter / topicShift)
-    // TODO Phase 5: Execute flow step + send reply + persist outbound + upsert session
-    // Available context: message (NormalizedMessage), session (SessionState | null), correlationId
+    // --- Phase 4: Route message ---
+    await routeMessage({ message, session, correlationId });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
