@@ -76,7 +76,8 @@ export function normalizeMessage(payload: unknown): NormalizedMessage | null {
 
   const isGroup =
     key.remoteJid.endsWith("@g.us") || key.remoteJid.endsWith("@lid");
-  const userId = key.remoteJid.split("@")[0];
+  const userId = key.remoteJid.split("@")[0].replace(/\D/g, "");
+  if (!userId) return null;
 
   let timestamp: Date;
   if (messageTimestamp) {
@@ -113,14 +114,6 @@ export function applyGuards(
     return {
       shouldProcess: false,
       reason: "group_message",
-      requiresAutoReply: false,
-    };
-  }
-
-  if (message.remoteJid.endsWith("@lid")) {
-    return {
-      shouldProcess: false,
-      reason: "community_lid",
       requiresAutoReply: false,
     };
   }

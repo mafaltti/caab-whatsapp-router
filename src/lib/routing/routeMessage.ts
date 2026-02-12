@@ -34,6 +34,9 @@ const TOPIC_SWITCH_PREFIX = "Entendi, vamos mudar de assunto. ";
 const ERROR_REPLY =
   "Desculpe, estou com dificuldades técnicas no momento. Por favor, tente novamente em alguns minutos.";
 
+const JSON_FALLBACK_REPLY =
+  "Desculpe, não entendi. Pode reformular sua mensagem?";
+
 interface RouteMessageOptions {
   message: NormalizedMessage;
   session: SessionState | null;
@@ -87,11 +90,49 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
       }
     } else {
       // New or expired session — classify from scratch
-      const classification = await classifyFlow({
+      const result = await classifyFlow({
         text: message.text,
         chatHistory,
         correlationId,
       });
+
+      if (!result.ok) {
+        // LLM service error → technical difficulties message
+        // Invalid JSON / schema validation → ask user to reformulate
+        const replyText =
+          result.errorType === "llm_error" ? ERROR_REPLY : JSON_FALLBACK_REPLY;
+
+        logger.warn({
+          correlation_id: correlationId,
+          event: "classify_flow_failed",
+          user_id: message.userId,
+          instance: message.instanceName,
+          error_type: result.errorType,
+        });
+
+        await sendText(
+          message.instanceName,
+          message.remoteJid,
+          replyText,
+          correlationId,
+        );
+
+        insertOutbound(message.userId, message.instanceName, replyText).catch(
+          (err) => {
+            logger.error({
+              correlation_id: correlationId,
+              event: "outbound_persist_error",
+              user_id: message.userId,
+              instance: message.instanceName,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          },
+        );
+
+        return;
+      }
+
+      const classification = result.data;
 
       if (classification.confidence >= CONFIDENCE_ACCEPT) {
         flow = classification.flow;
@@ -132,9 +173,15 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
       correlationId,
     );
 
-    // Persist outbound (fire-and-forget)
-    insertOutbound(message.userId, message.instanceName, reply).catch(() => {
-      // error already logged inside insertOutbound via supabase
+    // Persist outbound
+    insertOutbound(message.userId, message.instanceName, reply).catch((err) => {
+      logger.error({
+        correlation_id: correlationId,
+        event: "outbound_persist_error",
+        user_id: message.userId,
+        instance: message.instanceName,
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
   } catch (err) {
     logger.error({

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { logger, generateCorrelationId } from "@/lib/shared";
 import { normalizeMessage, applyGuards } from "@/lib/webhook";
 import { sendText } from "@/lib/evolution";
@@ -50,13 +50,14 @@ export async function POST(request: Request) {
       });
 
       if (guardResult.requiresAutoReply && guardResult.autoReplyText) {
-        sendText(
-          message.instanceName,
-          message.remoteJid,
-          guardResult.autoReplyText,
-          correlationId,
-        ).catch(() => {
-          // fire-and-forget: error already logged inside sendText
+        const autoReplyText = guardResult.autoReplyText;
+        after(async () => {
+          sendText(
+            message.instanceName,
+            message.remoteJid,
+            autoReplyText,
+            correlationId,
+          ).catch(() => {});
         });
       }
 
@@ -72,84 +73,97 @@ export async function POST(request: Request) {
       text_length: message.text.length,
     });
 
-    // --- Phase 3: Deduplication ---
-    const dedupeStart = performance.now();
-    let isNewMessage: boolean;
+    // Defer heavy processing (DB + LLM + API calls) to after response
+    after(async () => {
+      try {
+        // --- Deduplication ---
+        const dedupeStart = performance.now();
+        let isNewMessage: boolean;
 
-    try {
-      isNewMessage = await insertInboundIfNew(
-        message.messageId,
-        message.userId,
-        message.instanceName,
-        message.text,
-      );
-    } catch (err) {
-      logger.error({
-        correlation_id: correlationId,
-        event: "dedupe_error",
-        user_id: message.userId,
-        instance: message.instanceName,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return NextResponse.json({ ok: true });
-    }
+        try {
+          isNewMessage = await insertInboundIfNew(
+            message.messageId,
+            message.userId,
+            message.instanceName,
+            message.text,
+          );
+        } catch (err) {
+          logger.error({
+            correlation_id: correlationId,
+            event: "dedupe_error",
+            user_id: message.userId,
+            instance: message.instanceName,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return;
+        }
 
-    const dedupeDuration = Math.round(performance.now() - dedupeStart);
+        const dedupeDuration = Math.round(performance.now() - dedupeStart);
 
-    if (!isNewMessage) {
-      logger.info({
-        correlation_id: correlationId,
-        event: "message_duplicate",
-        user_id: message.userId,
-        instance: message.instanceName,
-        message_id: message.messageId,
-        duration_ms: dedupeDuration,
-      });
-      return NextResponse.json({ ok: true });
-    }
+        if (!isNewMessage) {
+          logger.info({
+            correlation_id: correlationId,
+            event: "message_duplicate",
+            user_id: message.userId,
+            instance: message.instanceName,
+            message_id: message.messageId,
+            duration_ms: dedupeDuration,
+          });
+          return;
+        }
 
-    logger.info({
-      correlation_id: correlationId,
-      event: "new_message_stored",
-      user_id: message.userId,
-      instance: message.instanceName,
-      message_id: message.messageId,
-      duration_ms: dedupeDuration,
+        logger.info({
+          correlation_id: correlationId,
+          event: "new_message_stored",
+          user_id: message.userId,
+          instance: message.instanceName,
+          message_id: message.messageId,
+          duration_ms: dedupeDuration,
+        });
+
+        // --- Session loading ---
+        const sessionStart = performance.now();
+        let session: SessionState | null;
+
+        try {
+          session = await getSession(message.userId);
+        } catch (err) {
+          logger.error({
+            correlation_id: correlationId,
+            event: "session_load_error",
+            user_id: message.userId,
+            instance: message.instanceName,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return;
+        }
+
+        const sessionDuration = Math.round(performance.now() - sessionStart);
+
+        logger.info({
+          correlation_id: correlationId,
+          event: session ? "session_loaded" : "session_new_user",
+          user_id: message.userId,
+          instance: message.instanceName,
+          ...(session && {
+            flow: session.activeFlow,
+            step: session.step,
+          }),
+          duration_ms: sessionDuration,
+        });
+
+        // --- Route message ---
+        await routeMessage({ message, session, correlationId });
+      } catch (err) {
+        logger.error({
+          correlation_id: correlationId,
+          event: "after_processing_error",
+          user_id: message.userId,
+          instance: message.instanceName,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     });
-
-    // --- Phase 3: Session loading ---
-    const sessionStart = performance.now();
-    let session: SessionState | null;
-
-    try {
-      session = await getSession(message.userId);
-    } catch (err) {
-      logger.error({
-        correlation_id: correlationId,
-        event: "session_load_error",
-        user_id: message.userId,
-        instance: message.instanceName,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return NextResponse.json({ ok: true });
-    }
-
-    const sessionDuration = Math.round(performance.now() - sessionStart);
-
-    logger.info({
-      correlation_id: correlationId,
-      event: session ? "session_loaded" : "session_new_user",
-      user_id: message.userId,
-      instance: message.instanceName,
-      ...(session && {
-        flow: session.activeFlow,
-        step: session.step,
-      }),
-      duration_ms: sessionDuration,
-    });
-
-    // --- Phase 4: Route message ---
-    await routeMessage({ message, session, correlationId });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
