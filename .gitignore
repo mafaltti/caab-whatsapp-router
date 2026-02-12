@@ -31,6 +31,7 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+nul
 .DS_Store?
 ._*
 .Spotlight-V100
