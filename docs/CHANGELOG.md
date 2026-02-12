@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 #### Added
 - Conversational prompts (`src/lib/llm/prompts.ts`): `unknownConversationSystemPrompt()` (Portuguese, instructs LLM to act as friendly CAAB WhatsApp assistant, keep replies short, never mention being AI, return JSON `{"reply": "..."}`) and `unknownConversationUserPrompt(text, chatHistory)`
 
+#### Fixed
+- Routing orchestrator (`src/lib/routing/routeMessage.ts`): skip topic shift detection when `activeFlow === "unknown"` — the unknown flow already handles its own intent classification via `classifyFlow()` inside step handlers; running the topic shift detector on top caused false positives on ambiguous/conversational messages (e.g. casual greetings misclassified as `general_support`)
+
 ### Phase 6 — Digital Certificate Flow Implementation
 #### Added
 - Field validators (`src/lib/flows/digitalCertificate/validation.ts`): `isValidCpf` (11 digits, not all same), `isValidCnpj` (14 digits, not all same), `isValidCpfCnpj` (dispatches by person type), `isValidEmail` (@ with domain), `isValidPhone` (10–11 digits). MVP length checks only — no mathematical check-digit validation

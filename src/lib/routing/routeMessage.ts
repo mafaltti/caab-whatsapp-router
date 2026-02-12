@@ -41,13 +41,16 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
     let done = false;
 
     if (session?.activeFlow) {
-      // Existing session — check for topic shift
-      const shift = await detectTopicShift({
-        text: message.text,
-        currentFlow: session.activeFlow,
-        chatHistory,
-        correlationId,
-      });
+      // Skip topic shift for unknown flow — it handles its own classification
+      const shift =
+        session.activeFlow === "unknown"
+          ? null
+          : await detectTopicShift({
+              text: message.text,
+              currentFlow: session.activeFlow,
+              chatHistory,
+              correlationId,
+            });
 
       if (shift) {
         flow = shift.flow;
