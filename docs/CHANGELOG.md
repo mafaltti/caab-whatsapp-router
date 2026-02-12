@@ -3,6 +3,26 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Phase 5 — Flow Framework + Deterministic Step Machine
+#### Added
+- Flow type system (`src/lib/flows/types.ts`): `FlowContext`, `StepResult`, `StepHandler`, `FlowSubrouteDefinition`, `FlowDefinition`, `FlowExecutionResult` interfaces. Steps return declarative `StepResult` (reply, nextStep, partial data merge, done flag) — engine handles state transitions
+- Flow execution engine (`src/lib/flows/engine.ts`): `executeFlow()` — looks up flow from registry, runs subroute classification (via `classifySubroute`) when flow has populated subroutes and no active subroute, resolves step handler from subroute or top-level steps, executes with try/catch, logs `step_executed` transitions. On missing flow/step → error reply + `done: true`. On handler exception → preserves current state
+- Flow registry (`src/lib/flows/registry.ts`): `getFlowDefinition()` maps flow IDs to definitions. Registers all 4 flows: unknown, general_support, digital_certificate, billing
+- Unknown flow (`src/lib/flows/unknown/`): single `start` step showing numbered menu (Certificado Digital / Faturamento / Suporte Geral), returns `done: true` to clear session so next message triggers fresh global routing
+- General support flow (`src/lib/flows/generalSupport/`): **multi-turn proof** — 2 deterministic steps without LLM driving: `start` asks user to describe problem → `awaiting_problem` captures text, confirms handoff with problem summary, stores `{ problem, handoff_at }` in session data, returns `done: true`
+- Digital certificate stub flow (`src/lib/flows/digitalCertificate/`): single `start` step with placeholder message + `done: true`. No subroutes defined yet (engine skips subroute classification). Phase 6 will add subroute definitions
+- Billing stub flow (`src/lib/flows/billing/`): single `start` step with placeholder message + `done: true`. Phase 9 will add subroute definitions
+- Barrel export (`src/lib/flows/index.ts`): exports `executeFlow`, `getFlowDefinition`, and all flow types
+
+#### Changed
+- Routing orchestrator (`src/lib/routing/routeMessage.ts`): replaced static `FLOW_REPLIES` map, `TOPIC_SWITCH_PREFIX`, and `CLARIFY_REPLY` constants with `executeFlow()` calls across all 3 scenarios (continue flow, topic shift, new/expired session). Session persistence now branches: `done: true` → `clearSession()`, else `upsertSession()` with engine's `nextState` (activeFlow, activeSubroute, step, data)
+
+#### Removed
+- `FLOW_REPLIES` constant — replaced by per-flow step handlers
+- `TOPIC_SWITCH_PREFIX` constant — inlined in topic shift branch
+- `CLARIFY_REPLY` constant — replaced by unknown flow menu
+- `src/lib/flows/.gitkeep` placeholder
+
 ### Phase 4.5 — LLM Layer B & C: Subroute Router + Data Extractors
 #### Added
 - Subroute router (`src/lib/llm/subrouteRouter.ts`): `classifySubroute()` with 5-stage validation pipeline (config check, LLM call, JSON parse, Zod schema, valid subroute ID). Returns discriminated union `ClassifySubrouteResult`. Generic design — flow-specific subroutes configured via `SUBROUTE_CONFIG` map

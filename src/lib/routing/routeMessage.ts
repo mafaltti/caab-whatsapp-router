@@ -2,6 +2,7 @@ import { logger } from "@/lib/shared";
 import type { NormalizedMessage } from "@/lib/shared";
 import {
   upsertSession,
+  clearSession,
   insertOutbound,
   loadRecentMessages,
   type SessionState,
@@ -14,22 +15,7 @@ import {
   CONFIDENCE_CLARIFY,
   type FlowType,
 } from "@/lib/llm";
-
-const FLOW_REPLIES: Record<FlowType, string> = {
-  digital_certificate:
-    "Entendi que você precisa de ajuda com certificado digital! Em breve vou te guiar pelo processo. Por enquanto, aguarde que estamos implementando o fluxo completo.",
-  billing:
-    "Entendi que você precisa de ajuda com faturamento! Em breve vou te guiar pelo processo. Por enquanto, aguarde que estamos implementando o fluxo completo.",
-  general_support:
-    "Entendi que você precisa de suporte! Em breve vou te conectar com alguém que possa ajudar. Por enquanto, aguarde que estamos implementando o fluxo completo.",
-  unknown:
-    "Olá! Como posso te ajudar? Trabalho com certificado digital, faturamento e suporte geral.",
-};
-
-const CLARIFY_REPLY =
-  "Desculpe, não tenho certeza do que você precisa. Pode me dizer com mais detalhes?";
-
-const TOPIC_SWITCH_PREFIX = "Entendi, vamos mudar de assunto. ";
+import { executeFlow, type FlowExecutionResult } from "@/lib/flows";
 
 const ERROR_REPLY =
   "Desculpe, estou com dificuldades técnicas no momento. Por favor, tente novamente em alguns minutos.";
@@ -51,6 +37,8 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
 
     let flow: FlowType;
     let reply: string;
+    let nextState: FlowExecutionResult["nextState"];
+    let done = false;
 
     if (session?.activeFlow) {
       // Existing session — check for topic shift
@@ -63,7 +51,6 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
 
       if (shift) {
         flow = shift.flow;
-        reply = TOPIC_SWITCH_PREFIX + FLOW_REPLIES[flow];
 
         logger.info({
           correlation_id: correlationId,
@@ -74,11 +61,26 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
           flow,
           confidence: shift.confidence,
         });
+
+        const flowResult = await executeFlow({
+          state: {
+            ...session,
+            activeFlow: flow,
+            activeSubroute: null,
+            step: "start",
+            data: {},
+          },
+          message,
+          chatHistory,
+          correlationId,
+        });
+
+        reply = "Entendi, vamos mudar de assunto. " + flowResult.reply;
+        nextState = flowResult.nextState;
+        done = flowResult.done;
       } else {
         // No topic shift — continue current flow
         flow = session.activeFlow as FlowType;
-        // Phase 5 will replace this with step execution
-        reply = FLOW_REPLIES[flow] ?? FLOW_REPLIES.unknown;
 
         logger.info({
           correlation_id: correlationId,
@@ -87,6 +89,17 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
           instance: message.instanceName,
           flow,
         });
+
+        const flowResult = await executeFlow({
+          state: session,
+          message,
+          chatHistory,
+          correlationId,
+        });
+
+        reply = flowResult.reply;
+        nextState = flowResult.nextState;
+        done = flowResult.done;
       }
     } else {
       // New or expired session — classify from scratch
@@ -97,8 +110,6 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
       });
 
       if (!result.ok) {
-        // LLM service error → technical difficulties message
-        // Invalid JSON / schema validation → ask user to reformulate
         const replyText =
           result.errorType === "llm_error" ? ERROR_REPLY : JSON_FALLBACK_REPLY;
 
@@ -136,13 +147,10 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
 
       if (classification.confidence >= CONFIDENCE_ACCEPT) {
         flow = classification.flow;
-        reply = FLOW_REPLIES[flow];
       } else if (classification.confidence >= CONFIDENCE_CLARIFY) {
         flow = "unknown";
-        reply = CLARIFY_REPLY;
       } else {
         flow = "unknown";
-        reply = FLOW_REPLIES.unknown;
       }
 
       logger.info({
@@ -153,17 +161,41 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
         flow,
         confidence: classification.confidence,
       });
+
+      const flowResult = await executeFlow({
+        state: {
+          userId: message.userId,
+          instance: message.instanceName,
+          activeFlow: flow,
+          activeSubroute: null,
+          step: "start",
+          data: {},
+          updatedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        message,
+        chatHistory,
+        correlationId,
+      });
+
+      reply = flowResult.reply;
+      nextState = flowResult.nextState;
+      done = flowResult.done;
     }
 
-    // Upsert session
-    await upsertSession({
-      userId: message.userId,
-      instance: message.instanceName,
-      activeFlow: flow,
-      activeSubroute: flow === session?.activeFlow ? (session.activeSubroute ?? null) : null,
-      step: flow === session?.activeFlow ? (session.step ?? "start") : "start",
-      data: flow === session?.activeFlow ? (session.data ?? {}) : {},
-    });
+    // Persist session state
+    if (done) {
+      await clearSession(message.userId);
+    } else {
+      await upsertSession({
+        userId: message.userId,
+        instance: message.instanceName,
+        activeFlow: nextState.activeFlow,
+        activeSubroute: nextState.activeSubroute,
+        step: nextState.step,
+        data: nextState.data,
+      });
+    }
 
     // Send reply
     await sendText(
