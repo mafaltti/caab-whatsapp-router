@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import { RateLimitError } from "groq-sdk/error";
 import { logger } from "@/lib/shared";
 
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "openai/gpt-oss-120b";
 const DEFAULT_MAX_TOKENS = 500;
 const DEFAULT_TEMPERATURE = 0;
 const TIMEOUT_MS = 8000;

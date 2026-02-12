@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Seamless flow handoff — when intent is detected during the unknown conversation, the user enters the target flow in the same message cycle without repeating themselves
 - Turn count awareness — LLM becomes more direct and mentions available services on later conversation turns
 
+### Changed
+- LLM model switched from `llama-3.3-70b-versatile` to `openai/gpt-oss-120b`
+
 ### Fixed
 - Topic shift no longer triggers during the unknown flow conversation, preventing casual messages from being misrouted
 - Handoff replies no longer show contradictory double messages (stale conversational reply + target flow reply)
