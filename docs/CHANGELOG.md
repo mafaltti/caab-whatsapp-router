@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-02-12
 
+### Phase 3 — Processing Pipeline (Dedupe + Session Load)
+#### Changed
+- Webhook route (`src/app/api/webhook/evolution/route.ts`): wired `insertInboundIfNew` for message deduplication (duplicate webhooks return 200 with no further processing) and `getSession` for session loading (handles expired sessions as new users). All DB errors return 200 to prevent Evolution retry storms. Added `performance.now()` duration tracking for DB latency monitoring.
+
 ### Phase 2 — Webhook Endpoint + Evolution API Normalization
 #### Added
 - Shared types (`src/lib/shared/types.ts`): `NormalizedMessage` and `GuardResult` interfaces

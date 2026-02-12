@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logger, generateCorrelationId } from "@/lib/shared";
 import { normalizeMessage, applyGuards } from "@/lib/webhook";
 import { sendText } from "@/lib/evolution";
+import { insertInboundIfNew, getSession, type SessionState } from "@/lib/db";
 
 export async function POST(request: Request) {
   const correlationId = generateCorrelationId();
@@ -70,13 +71,85 @@ export async function POST(request: Request) {
       text_length: message.text.length,
     });
 
-    // TODO Phase 3: Deduplicate by message_id (insertInboundIfNew)
-    // TODO Phase 3: Load/create session (getSession / upsertSession)
-    // TODO Phase 4: Global flow router (LLM Layer A)
-    // TODO Phase 4: Topic shift detection
-    // TODO Phase 5: In-flow subroute selection (LLM Layer B)
-    // TODO Phase 5: Step machine execution
-    // TODO Phase 5: Send reply and persist outbound message
+    // --- Phase 3: Deduplication ---
+    const dedupeStart = performance.now();
+    let isNewMessage: boolean;
+
+    try {
+      isNewMessage = await insertInboundIfNew(
+        message.messageId,
+        message.userId,
+        message.instanceName,
+        message.text,
+      );
+    } catch (err) {
+      logger.error({
+        correlation_id: correlationId,
+        event: "dedupe_error",
+        user_id: message.userId,
+        instance: message.instanceName,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    const dedupeDuration = Math.round(performance.now() - dedupeStart);
+
+    if (!isNewMessage) {
+      logger.info({
+        correlation_id: correlationId,
+        event: "message_duplicate",
+        user_id: message.userId,
+        instance: message.instanceName,
+        message_id: message.messageId,
+        duration_ms: dedupeDuration,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    logger.info({
+      correlation_id: correlationId,
+      event: "new_message_stored",
+      user_id: message.userId,
+      instance: message.instanceName,
+      message_id: message.messageId,
+      duration_ms: dedupeDuration,
+    });
+
+    // --- Phase 3: Session loading ---
+    const sessionStart = performance.now();
+    let session: SessionState | null;
+
+    try {
+      session = await getSession(message.userId);
+    } catch (err) {
+      logger.error({
+        correlation_id: correlationId,
+        event: "session_load_error",
+        user_id: message.userId,
+        instance: message.instanceName,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    const sessionDuration = Math.round(performance.now() - sessionStart);
+
+    logger.info({
+      correlation_id: correlationId,
+      event: session ? "session_loaded" : "session_new_user",
+      user_id: message.userId,
+      instance: message.instanceName,
+      ...(session && {
+        flow: session.activeFlow,
+        step: session.step,
+      }),
+      duration_ms: sessionDuration,
+    });
+
+    // TODO Phase 4: Route message (globalRouter / topicShift)
+    // TODO Phase 5: Execute flow step + send reply + persist outbound + upsert session
+    // Available context: message (NormalizedMessage), session (SessionState | null), correlationId
 
     return NextResponse.json({ ok: true });
   } catch (err) {
