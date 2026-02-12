@@ -4,8 +4,10 @@
 - **Node.js 18+** (recommend using [nvm](https://github.com/nvm-sh/nvm))
 - **npm** or **pnpm**
 - **Git**
+- **Docker Desktop** (required for local Supabase) - [download](https://www.docker.com/products/docker-desktop/)
+- **Supabase CLI** (`npm install -g supabase`)
 - **ngrok** account (free tier) - for local webhook testing
-- **Supabase** account (free tier)
+- **Supabase** account (free tier) - create staging + production projects
 - **Groq** account (free tier) - create multiple API keys for rotation
 - **Evolution API** instance (for testing)
 
@@ -62,30 +64,69 @@ NODE_ENV=production
 
 ### 3. Database Setup with Supabase
 
-#### Option A: Using Supabase Dashboard (Easier)
-1. Go to your [Supabase Dashboard](https://app.supabase.com)
-2. Create a new project (or use existing)
-3. Go to **SQL Editor**
-4. Copy contents of `migrations/YYYYMMDD001_init.sql`
-5. Run the migration
-6. Verify tables created: `conversation_state`, `chat_messages`
+Following [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments) guidelines.
 
-#### Option B: Using Supabase CLI (Recommended for team)
+#### Local Development (Recommended — uses Docker)
 ```bash
-# Install Supabase CLI globally
-npm install -g supabase
+# Initialize Supabase (creates supabase/ folder with config.toml)
+supabase init
 
+# Start local Supabase (requires Docker Desktop running)
+supabase start
+
+# Output shows local URLs:
+#   API URL:    http://localhost:54321
+#   GraphQL URL: http://localhost:54321/graphql/v1
+#   DB URL:     postgresql://postgres:postgres@localhost:54322/postgres
+#   Studio URL: http://localhost:54323
+#   anon key:   eyJ...
+#   service_role key: eyJ...
+```
+
+Use the `service_role key` from the output in your `.env.local`:
+```bash
+SUPABASE_URL=http://localhost:54321
+SUPABASE_SERVICE_ROLE_KEY=<service_role key from supabase start output>
+```
+
+#### Creating Migrations
+```bash
+# Option 1: Manual SQL (recommended for precise control)
+supabase migration new init
+# Edit the created file: supabase/migrations/YYYYMMDD_init.sql
+
+# Option 2: Auto-generate from Studio UI changes
+# Make changes via Studio at http://localhost:54323
+# Then generate migration:
+supabase db diff -f describe_your_change
+```
+
+#### Applying Migrations Locally
+```bash
+# Reset local DB and apply all migrations + seed data
+supabase db reset
+
+# Generate TypeScript types from schema
+supabase gen types typescript --local > src/lib/db/types.ts
+```
+
+#### Staging/Production Setup
+```bash
 # Login to Supabase
 supabase login
 
-# Link to your project
-supabase link --project-ref your-project-ref
+# Link to staging project (for manual deployment)
+supabase link --project-ref $STAGING_PROJECT_ID
+supabase db push   # Apply migrations to staging
 
-# Push migrations to database
-supabase db push
+# For production: migrations are deployed via GitHub Actions (never manually)
+```
 
-# Verify migration status
-supabase migration list
+#### Pull Existing Remote Schema (for existing projects)
+If you need to capture schema changes made via Supabase Dashboard:
+```bash
+supabase link --project-ref $PROJECT_ID
+supabase db pull   # Creates migration file from current remote schema
 ```
 
 ---
@@ -176,25 +217,41 @@ npm run format
 
 ### Database Migrations
 
+All migrations live in `supabase/migrations/` (not `migrations/` at root).
+
 #### Create New Migration
 ```bash
-# Using Supabase CLI
+# Option 1: Manual SQL (recommended)
 supabase migration new add_new_field
-
-# This creates: migrations/YYYYMMDD_add_new_field.sql
+# Creates: supabase/migrations/YYYYMMDD_add_new_field.sql
 # Edit the file with your SQL changes
+
+# Option 2: Auto-generate from Studio UI changes
+# Make changes via Studio at http://localhost:54323
+supabase db diff -f add_new_field
+# Generates migration from diff between current schema and migrations
 ```
 
-#### Apply Migrations
+#### Apply Migrations Locally
 ```bash
-# Local development
-supabase db push
+# Reset local DB and re-apply all migrations + seed data
+supabase db reset
 
-# Production (via Supabase Dashboard)
-# Copy SQL and run in SQL Editor
+# After schema changes, regenerate TypeScript types
+supabase gen types typescript --local > src/lib/db/types.ts
 ```
 
-#### Reset Database (CAUTION: Deletes all data)
+#### Deploy Migrations to Staging (manual)
+```bash
+supabase link --project-ref $STAGING_PROJECT_ID
+supabase db push
+```
+
+#### Deploy Migrations to Production
+**Never run `supabase db push` directly on production.**
+Migrations deploy automatically via GitHub Actions when merged to `main`.
+
+#### Reset Database (CAUTION: Local only, deletes all data)
 ```bash
 supabase db reset
 ```
@@ -390,6 +447,100 @@ Before committing code, verify:
 - [ ] Messages send successfully via Evolution API
 - [ ] No TypeScript errors: `npx tsc --noEmit`
 - [ ] Code is formatted: `npm run lint`
+
+---
+
+## Multi-Environment Setup
+
+Following [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments) guidelines, the project uses 3 tiers:
+
+### Environment Mapping
+| Environment | Git Branch | Supabase | Vercel | When |
+|-------------|------------|----------|--------|------|
+| Local Dev | feature/* | Docker (`supabase start`) | localhost:3000 | Active development |
+| Staging | develop | Staging Supabase project | Vercel preview URL | Integration testing |
+| Production | main | Production Supabase project | Vercel production URL | Live users |
+
+### Local Development (Docker)
+```bash
+# Start local Supabase stack
+supabase start
+
+# Local services:
+# - API: http://localhost:54321
+# - Studio: http://localhost:54323
+# - DB: postgresql://postgres:postgres@localhost:54322/postgres
+
+# Stop when done
+supabase stop
+```
+
+### Staging Environment
+```bash
+# Link to staging project
+supabase link --project-ref $STAGING_PROJECT_ID
+
+# Deploy migrations to staging manually
+supabase db push
+
+# Check migration status
+supabase migration list
+```
+
+### Production Environment
+- **Never** run `supabase db push` directly on production
+- Migrations are deployed automatically via GitHub Actions on merge to `main`
+- Rollback: create a new migration that reverses the change, merge to main
+
+---
+
+## Git Branching Strategy
+
+```
+feature/add-billing-flow  →  develop (staging)  →  main (production)
+         ↓                        ↓                      ↓
+   Local Supabase          Staging Supabase       Production Supabase
+   (Docker)                (auto-deploy)          (auto-deploy)
+```
+
+### Workflow
+1. **Create feature branch** from `develop`:
+   ```bash
+   git checkout develop
+   git pull
+   git checkout -b feature/my-feature
+   ```
+
+2. **Develop locally** (Docker Supabase + Next.js dev server):
+   - Add migration files to `supabase/migrations/`
+   - Regenerate types: `supabase gen types typescript --local > src/lib/db/types.ts`
+   - Test locally with `supabase db reset`
+
+3. **Open PR to develop**:
+   - CI validates TypeScript types match schema
+   - Team reviews code
+
+4. **Merge to develop** → staging auto-deploy:
+   - GitHub Actions applies migrations to staging Supabase
+   - Vercel deploys preview for testing
+
+5. **Merge develop to main** → production deploy:
+   - GitHub Actions applies migrations to production Supabase
+   - Vercel deploys to production
+
+---
+
+## CI/CD Secrets (GitHub Repository Settings)
+
+Configure these in **GitHub → Repository → Settings → Secrets and variables → Actions**:
+
+| Secret Name | Description | Where to Get |
+|-------------|-------------|--------------|
+| `SUPABASE_ACCESS_TOKEN` | Personal access token | supabase.com/dashboard/account/tokens |
+| `SUPABASE_DB_PASSWORD_STAGING` | Staging DB password | Set during project creation |
+| `SUPABASE_DB_PASSWORD_PRODUCTION` | Production DB password | Set during project creation |
+| `STAGING_PROJECT_ID` | Staging project reference | Dashboard URL: `supabase.com/dashboard/project/<id>` |
+| `PRODUCTION_PROJECT_ID` | Production project reference | Dashboard URL: `supabase.com/dashboard/project/<id>` |
 
 ---
 

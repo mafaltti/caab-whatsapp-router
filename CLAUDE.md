@@ -340,6 +340,12 @@ Every inbound message execution MUST:
 
 ## Suggested Project Structure (Next.js)
 ```
+supabase/
+  config.toml                    (Supabase CLI config, created by supabase init)
+  migrations/
+    YYYYMMDD001_init.sql         (database schema migration)
+  seed.sql                       (test data for local development)
+
 src/
   app/
     api/
@@ -356,6 +362,7 @@ src/
       supabase.ts                (Supabase client)
       sessionRepo.ts             (conversation_state operations)
       messageRepo.ts             (chat_messages operations)
+      types.ts                   (auto-generated: supabase gen types typescript)
     evolution/
       client.ts                  (sendText, API calls)
     llm/
@@ -385,8 +392,11 @@ src/
       errors.ts                  (error types)
       types.ts                   (shared TypeScript types)
 
-migrations/
-  YYYYMMDD001_init.sql           (Supabase migration)
+.github/
+  workflows/
+    ci.yml                       (PR validation: lint + type check)
+    staging.yml                  (deploy migrations to staging on develop merge)
+    production.yml               (deploy migrations to production on main merge)
 
 .env.local                       (local environment variables)
 .env.example                     (template for env vars)
@@ -395,8 +405,10 @@ migrations/
 ---
 
 ## Environment Variables
+
+### Application (`.env.local` / Vercel Dashboard)
 Required:
-- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_URL` - Supabase project URL (local: http://localhost:54321)
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (not anon key)
 - `EVOLUTION_BASE_URL` - Evolution API base URL (e.g., https://api.evolution.com)
 - `EVOLUTION_API_KEY` - Evolution API authentication key
@@ -408,6 +420,13 @@ Optional:
 - `LOG_LEVEL` - Logging level (debug|info|warn|error, default: info)
 - `NODE_ENV` - Environment (development|production)
 - `PORT` - Local development port (Next.js default: 3000)
+
+### CI/CD (GitHub Secrets only — never in code)
+- `SUPABASE_ACCESS_TOKEN` - Personal access token (supabase.com/dashboard/account/tokens)
+- `SUPABASE_DB_PASSWORD_STAGING` - Staging project database password
+- `SUPABASE_DB_PASSWORD_PRODUCTION` - Production project database password
+- `STAGING_PROJECT_ID` - Staging Supabase project ref
+- `PRODUCTION_PROJECT_ID` - Production Supabase project ref
 
 ---
 

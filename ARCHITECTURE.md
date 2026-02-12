@@ -640,6 +640,9 @@ No mention of "your session expired" to user
 
 ## Database Schema
 
+Migrations stored in `supabase/migrations/` (managed via Supabase CLI).
+TypeScript types auto-generated with `supabase gen types typescript --local > src/lib/db/types.ts`.
+
 ### conversation_state
 ```sql
 CREATE TABLE conversation_state (
@@ -752,35 +755,55 @@ All sensitive values stored in **Vercel Project Settings → Environment Variabl
 
 ### CI/CD Pipeline
 
+Following [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments):
+
 ```
-Developer commits to branch
+Developer creates feature branch from develop
   ↓
-Push to GitHub
+Develops locally (Docker Supabase + Next.js dev server)
   ↓
-Vercel detects push
+Push to GitHub → Open PR to develop
   ↓
-Vercel builds Next.js app
-  ├─ npm install
-  ├─ npm run build
-  └─ Validate build succeeded
+GitHub Actions CI (ci.yml):
+  ├─ Start local Supabase
+  ├─ Apply migrations
+  ├─ Validate TypeScript types match schema
+  └─ Run lints
   ↓
-Vercel deploys serverless functions
+Merge to develop
   ↓
-Preview URL created: https://caab-whatsapp-router-git-branch.vercel.app
+GitHub Actions Staging (staging.yml):         Vercel deploys preview:
+  ├─ supabase link --project-ref STAGING      ├─ npm install
+  └─ supabase db push (migrations)            ├─ npm run build
+                                              └─ Deploy to preview URL
   ↓
-Developer tests on preview URL
+Test on staging (preview URL + staging Supabase)
   ↓
-Merge to main branch
+Merge develop to main
   ↓
-Vercel deploys to production
-  ↓
-Production URL updated: https://caab-whatsapp-router.vercel.app
+GitHub Actions Production (production.yml):   Vercel deploys production:
+  ├─ supabase link --project-ref PRODUCTION   ├─ npm install
+  └─ supabase db push (migrations)            ├─ npm run build
+                                              └─ Deploy to production URL
 ```
 
+**GitHub Actions Workflows** (`.github/workflows/`):
+- `ci.yml` — On PR: validate types, lint migrations
+- `staging.yml` — On merge to develop: deploy migrations to staging Supabase
+- `production.yml` — On merge to main: deploy migrations to production Supabase
+
+**CI/CD Secrets** (GitHub Repository → Settings → Secrets):
+| Secret | Purpose |
+|--------|---------|
+| `SUPABASE_ACCESS_TOKEN` | CLI authentication |
+| `SUPABASE_DB_PASSWORD_STAGING` | Staging DB password |
+| `SUPABASE_DB_PASSWORD_PRODUCTION` | Production DB password |
+| `STAGING_PROJECT_ID` | Staging project ref |
+| `PRODUCTION_PROJECT_ID` | Production project ref |
+
 **Rollback**:
-- One-click rollback in Vercel Dashboard
-- Can redeploy any previous deployment
-- Zero downtime during rollback
+- **Vercel**: One-click rollback in Dashboard, zero downtime
+- **Database**: Create new migration that reverses the change, merge to main
 
 ---
 

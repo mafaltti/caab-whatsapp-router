@@ -3,6 +3,11 @@
 ## Phase 0 — Bootstrap Next.js + TypeScript Project
 **Goal:** Set up Next.js app with TypeScript, dev environment, and basic structure.
 
+### Prerequisites
+- Node.js 18+
+- Docker Desktop (required for local Supabase)
+- Supabase CLI (`npm install -g supabase`)
+
 ### Setup Steps
 1. Create Next.js app:
    ```bash
@@ -16,11 +21,25 @@
    npm install -D @types/node
    ```
 
-3. Setup environment variables:
-   - Create `.env.local` with all required variables
+3. Initialize Supabase (creates `supabase/` folder with `config.toml`):
+   ```bash
+   supabase init
+   ```
+
+4. Start local Supabase (requires Docker Desktop running):
+   ```bash
+   supabase start
+   # Local services:
+   #   API URL: http://localhost:54321
+   #   Studio:  http://localhost:54323
+   #   DB URL:  postgresql://postgres:postgres@localhost:54322/postgres
+   ```
+
+5. Setup environment variables:
+   - Create `.env.local` with local Supabase URLs (from `supabase status` output)
    - Create `.env.example` as template (no secrets)
 
-4. Create directory structure:
+6. Create directory structure:
    ```
    src/
      app/
@@ -31,23 +50,71 @@
        db/, llm/, flows/, evolution/, shared/
    ```
 
-5. Create health check endpoint: `GET /api/health`
+7. Create health check endpoint: `GET /api/health`
    Returns `{"status": "ok", "timestamp": "..."}`
 
 **Exit Criteria**
 - `npm run dev` starts Next.js on http://localhost:3000
+- `supabase start` runs local Supabase successfully
+- Local Studio accessible at http://localhost:54323
 - `GET /api/health` returns successful response
 - TypeScript compiles without errors
-- Can deploy to Vercel (optional test)
+
+---
+
+## Phase 0.5 — Multi-Environment Supabase Setup
+**Goal:** Configure separate Supabase projects for staging and production, aligned with [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments) guidelines.
+
+### Environment Mapping
+| Environment | Git Branch | Supabase | Vercel |
+|-------------|------------|----------|--------|
+| Local Dev | feature/* | Docker (`supabase start`) | localhost:3000 |
+| Staging | develop | Staging Supabase project | Preview URL |
+| Production | main | Production Supabase project | Production URL |
+
+### Setup Steps
+1. Create two Supabase projects in dashboard:
+   - `caab-whatsapp-router-staging` (free tier)
+   - `caab-whatsapp-router-prod` (free tier or pro)
+
+2. Create `develop` branch:
+   ```bash
+   git checkout -b develop
+   git push -u origin develop
+   ```
+
+3. Configure GitHub repository secrets (Settings → Secrets → Actions):
+   - `SUPABASE_ACCESS_TOKEN` — Personal access token from supabase.com/dashboard/account/tokens
+   - `SUPABASE_DB_PASSWORD_STAGING` — Staging project database password
+   - `SUPABASE_DB_PASSWORD_PRODUCTION` — Production project database password
+   - `STAGING_PROJECT_ID` — Staging project ref (from dashboard URL)
+   - `PRODUCTION_PROJECT_ID` — Production project ref (from dashboard URL)
+
+4. Create GitHub Actions workflows (see `.github/workflows/`):
+   - `ci.yml` — Validate types and lint on PRs
+   - `staging.yml` — Auto-deploy migrations on merge to develop
+   - `production.yml` — Auto-deploy migrations on merge to main
+
+**Exit Criteria**
+- Local Supabase runs via Docker (`supabase start`)
+- Staging and production Supabase projects created
+- GitHub secrets configured
+- GitHub Actions deploy migrations automatically on branch merges
 
 ---
 
 ## Phase 1 — Supabase schema + repositories
 **Goal:** reliable persistence for state, history, and idempotency.
 
-- Create `migrations/YYYYMMDD001_init.sql`:
+- Create `supabase/migrations/YYYYMMDD001_init.sql` (use `supabase migration new init`):
   - `conversation_state` (add `active_subroute`)
   - `chat_messages` + unique index on `message_id`
+- Test locally with `supabase db reset` (rebuilds local DB and applies all migrations)
+- Generate TypeScript types from schema:
+  ```bash
+  supabase gen types typescript --local > src/lib/db/types.ts
+  ```
+- Create `supabase/seed.sql` with test data (sample conversation_state, chat_messages)
 - Implement Supabase client with service role key.
 - Implement repositories:
   - `getSession(userId)`
@@ -60,6 +127,8 @@
 **Exit criteria**
 - Duplicate `message_id` is rejected/ignored
 - Session upsert + TTL works
+- `supabase db reset` applies migrations and seed data locally
+- TypeScript types are generated and match schema
 
 ---
 
@@ -395,13 +464,27 @@ Each follows same pattern:
 - **"reiniciar" / "começar de novo"**: Clear user session, start fresh
 - **Detect and handle these keywords before flow routing**
 
+### CI/CD Pipeline (GitHub Actions + Supabase)
+Following [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments):
+- **PRs**: CI validates TypeScript types match schema (`supabase gen types typescript`)
+- **Merge to develop**: Auto-deploy migrations to staging Supabase project
+- **Merge to main**: Auto-deploy migrations to production Supabase project
+- **Never** run `supabase db push` directly on production
+
 ### Vercel Deployment
 - Push to GitHub repository
 - Connect to Vercel dashboard
-- Configure environment variables in Vercel
-- Set up production and preview environments
-- Test deployment with preview URL
+- Configure environment variables per environment (staging vs production)
+- Vercel auto-deploys: develop → preview, main → production
 - Configure custom domain (optional)
+
+### Git Branching Strategy
+```
+feature/xyz → develop (staging) → main (production)
+```
+- Feature branches: local Supabase (Docker)
+- Develop branch: staging Supabase project + Vercel preview
+- Main branch: production Supabase project + Vercel production
 
 ### Monitoring (Manual for MVP)
 - Review Vercel function logs daily
@@ -411,7 +494,9 @@ Each follows same pattern:
 
 **Exit Criteria**
 - Application deployed to Vercel successfully
-- Environment variables configured
+- GitHub Actions deploy migrations automatically
+- TypeScript types validated in CI
+- Environment variables configured per environment
 - Rate limiting works correctly
 - Logging outputs structured JSON
 - Can handle session reset command
