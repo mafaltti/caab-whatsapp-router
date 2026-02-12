@@ -3,10 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 ### Added
--
+- Webhook normalization: `contextInfo.quotedMessage` added to `extendedTextMessage` Zod schema (documents quoted reply structure in types)
 
 ### Fixed
--
+- Webhook guards: empty/whitespace-only text messages now silently ignored (`empty_text` guard) instead of passing through to processing
 
 ## 2026-02-12
 

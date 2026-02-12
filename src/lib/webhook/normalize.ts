@@ -6,7 +6,16 @@ const MEDIA_AUTO_REPLY =
 
 const EvolutionMessageSchema = z.object({
   conversation: z.string().optional(),
-  extendedTextMessage: z.object({ text: z.string() }).optional(),
+  extendedTextMessage: z
+    .object({
+      text: z.string(),
+      contextInfo: z
+        .object({
+          quotedMessage: z.unknown().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   imageMessage: z.unknown().optional(),
   audioMessage: z.unknown().optional(),
   videoMessage: z.unknown().optional(),
@@ -139,6 +148,14 @@ export function applyGuards(
     return {
       shouldProcess: false,
       reason: "unknown_message_type",
+      requiresAutoReply: false,
+    };
+  }
+
+  if (!message.text) {
+    return {
+      shouldProcess: false,
+      reason: "empty_text",
       requiresAutoReply: false,
     };
   }
