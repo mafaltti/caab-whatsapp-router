@@ -10,6 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-02-12
 
+### Phase 2 — Webhook Endpoint + Evolution API Normalization
+#### Added
+- Shared types (`src/lib/shared/types.ts`): `NormalizedMessage` and `GuardResult` interfaces
+- Structured JSON logger (`src/lib/shared/logger.ts`): `generateCorrelationId()`, level-gated `logger.debug/info/warn/error()` respecting `LOG_LEVEL` env var
+- Evolution API client (`src/lib/evolution/client.ts`): `sendText()` with 5s timeout, lazy env validation for Next.js build compatibility
+- Webhook normalization (`src/lib/webhook/normalize.ts`): Zod schema for Evolution API v2 `messages.upsert` payload, `normalizeMessage()`, `applyGuards()` with guard chain (fromMe → group → @lid → message type)
+- Barrel exports for `shared`, `evolution`, and `webhook` modules
+
+#### Changed
+- Webhook route (`src/app/api/webhook/evolution/route.ts`): replaced stub with full POST handler — correlation ID, JSON parsing, normalization, guard checks, fire-and-forget auto-reply for media messages, TODO stubs for Phase 3+
+
 ### Phase 1 — Supabase Schema + Repositories
 #### Added
 - Database migration (`20260212051650_init.sql`): `conversation_state` and `chat_messages` tables with partial unique index for message dedup
