@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Phase 6 — Digital Certificate Flow Implementation
+#### Added
+- Field validators (`src/lib/flows/digitalCertificate/validation.ts`): `isValidCpf` (11 digits, not all same), `isValidCnpj` (14 digits, not all same), `isValidCpfCnpj` (dispatches by person type), `isValidEmail` (@ with domain), `isValidPhone` (10–11 digits). MVP length checks only — no mathematical check-digit validation
+- Flow helpers (`src/lib/flows/digitalCertificate/helpers.ts`): `generateProtocolId()` (format `CD-YYYYMMDD-XXXX`), retry tracking (`getRetryCount`, `incrementRetry`, `isMaxRetriesReached` — max 3 retries via `data.{field}_retry_count` keys), `HUMAN_HANDOFF_REPLY` constant, `detectConfirmation()` (rule-based yes/no/unclear from Portuguese keywords), `detectFieldToCorrect()` (keyword + numeric 1–4 selection), `FIELD_TO_STEP` mapping, formatting functions (`formatPurchaseSummary`, `formatRenewalSummary`, `formatSupportSummary`) with CPF/CNPJ/phone masking
+- Purchase subroute (`src/lib/flows/digitalCertificate/subroutes/purchase.ts`): 6 step handlers — `ask_person_type` → `ask_cpf_cnpj` → `ask_email` → `ask_phone` → `confirm` → `ask_correction`. Uses `_asked_X` sentinel pattern to distinguish "asking the question" vs "processing the answer" on entry step's first call. Correction flow: `confirm` "não" → `ask_correction` detects field → clears old value + sets `_correcting: true` → re-asks that step → on success routes back to `confirm` instead of continuing forward. Each extraction step retries up to 3 times before human handoff
+- Renewal subroute (`src/lib/flows/digitalCertificate/subroutes/renewal.ts`): 3 step handlers — `ask_order_id` → `ask_email` → `confirm`. Order ID validated by length (>= 3 chars). Confirm "não" restarts the subroute from the beginning
+- Support subroute (`src/lib/flows/digitalCertificate/subroutes/support.ts`): 3 step handlers — `ask_problem` → `ask_order_id` → `confirm`. Problem description requires min 5 chars. Order ID is optional (user can reply "não" to skip). Confirm generates protocol + "técnico entrará em contato" message
+- Requirements subroute (`src/lib/flows/digitalCertificate/subroutes/requirements.ts`): 2 step handlers — `show_info` (displays PF and PJ document requirements) → `offer_purchase` (yes → ends session so next message triggers fresh subroute classification into purchase; no → goodbye + `done: true`)
+- Status subroute (`src/lib/flows/digitalCertificate/subroutes/status.ts`): 1 step handler — `ask_order_id` collects order ID then calls `getMockOrderStatus()` which varies response by last digit (0–3: Em processamento, 4–6: Aguardando validação, 7–9: Concluído). Returns `done: true`
+
+#### Changed
+- Digital certificate flow definition (`src/lib/flows/digitalCertificate/flow.ts`): replaced stub with full `FlowDefinition` wiring all 5 subroutes (purchase, renewal, support, requirements, status) with their entry steps and step handler maps. No changes to registry — it already imports `digitalCertificateFlow`
+- `handleStart` step (`src/lib/flows/digitalCertificate/steps.ts`): replaced "coming soon" placeholder with helpful prompt listing the 5 available options (comprar, renovar, status, requisitos, suporte). Removed `done: true` so session stays active for subroute classification on next message
+
 ### Phase 5 — Flow Framework + Deterministic Step Machine
 #### Added
 - Flow type system (`src/lib/flows/types.ts`): `FlowContext`, `StepResult`, `StepHandler`, `FlowSubrouteDefinition`, `FlowDefinition`, `FlowExecutionResult` interfaces. Steps return declarative `StepResult` (reply, nextStep, partial data merge, done flag) — engine handles state transitions
