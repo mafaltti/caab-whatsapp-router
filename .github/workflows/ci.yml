@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [develop, main]
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -14,8 +15,8 @@ jobs:
         with:
           version: latest
 
-      - name: Start local Supabase
-        run: supabase start
+      - name: Start local Supabase DB
+        run: supabase db start
 
       - name: Verify generated types are up to date
         run: |
@@ -23,6 +24,7 @@ jobs:
           if ! git diff --ignore-space-at-eol --exit-code -- src/lib/db/types.ts; then
             echo "::error::TypeScript types are out of date."
             echo "Run: supabase gen types typescript --local > src/lib/db/types.ts"
+            git diff -- src/lib/db/types.ts
             exit 1
           fi
 
