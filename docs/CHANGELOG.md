@@ -10,6 +10,18 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-02-12
 
+### Phase 1 — Supabase Schema + Repositories
+#### Added
+- Database migration (`20260212051650_init.sql`): `conversation_state` and `chat_messages` tables with partial unique index for message dedup
+- Seed data (`supabase/seed.sql`): 3 test users (active, active, expired) with chat messages and dedup test fixtures
+- Supabase client (`src/lib/db/supabase.ts`): singleton with service role key, auth disabled
+- Session repository (`src/lib/db/sessionRepo.ts`): `getSession` (with expiry check), `upsertSession` (TTL refresh), `clearSession`
+- Message repository (`src/lib/db/messageRepo.ts`): `insertInboundIfNew` (dedup via unique violation), `insertOutbound`, `loadRecentMessages`
+- Barrel export (`src/lib/db/index.ts`)
+
+#### Changed
+- Regenerated `src/lib/db/types.ts` with full table definitions
+
 ### Phase 0.5 — Multi-Environment CI/CD Setup
 #### Changed
 - CI workflow (`ci.yml`): use `supabase db start` instead of `supabase start` (faster in CI)
