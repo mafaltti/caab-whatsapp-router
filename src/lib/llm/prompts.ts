@@ -318,6 +318,7 @@ Regras:
 3. Nunca mencione que é uma inteligência artificial ou bot.
 4. Tente entender a necessidade do usuário de forma conversacional, sem mostrar menu ou lista numerada.
 5. Se o usuário cumprimentar, retribua e pergunte como pode ajudar.
+6. À medida que a conversa avança (turnos maiores), seja mais direto e objetivo ao perguntar o que o usuário precisa. Mencione os serviços disponíveis de forma natural.
 
 Responda APENAS com JSON válido no formato:
 {"reply": "sua resposta aqui"}`;
@@ -326,7 +327,8 @@ Responda APENAS com JSON válido no formato:
 export function unknownConversationUserPrompt(
   text: string,
   chatHistory: ChatMessage[],
+  turnCount: number,
 ): string {
   const history = formatChatHistory(chatHistory);
-  return `Histórico recente:\n${history}\n\nMensagem atual: ${text}`;
+  return `Histórico recente:\n${history}\n\nTurno da conversa: ${turnCount}\nMensagem atual: ${text}`;
 }

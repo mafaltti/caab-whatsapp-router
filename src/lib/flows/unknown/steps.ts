@@ -19,11 +19,12 @@ async function getConversationalReply(
   text: string,
   chatHistory: ChatMessage[],
   correlationId: string,
+  turnCount: number,
 ): Promise<string | null> {
   try {
     const result = await callLlm({
       systemPrompt: unknownConversationSystemPrompt(),
-      userPrompt: unknownConversationUserPrompt(text, chatHistory),
+      userPrompt: unknownConversationUserPrompt(text, chatHistory, turnCount),
       correlationId,
     });
     const parsed: unknown = JSON.parse(result.content);
@@ -53,6 +54,7 @@ export const handleStart: StepHandler = async (ctx) => {
     message.text,
     chatHistory,
     correlationId,
+    1,
   );
 
   if (!llmReply) {
@@ -93,6 +95,7 @@ export const handleAwaitingReply: StepHandler = async (ctx) => {
     message.text,
     chatHistory,
     correlationId,
+    turnCount + 1,
   );
 
   if (!llmReply) {

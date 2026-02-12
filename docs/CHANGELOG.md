@@ -10,7 +10,8 @@ All notable changes to this project will be documented in this file.
 - Routing orchestrator (`src/lib/routing/routeMessage.ts`): added `_handoff_flow` convention — after `executeFlow()` returns, checks `nextState.data._handoff_flow`; if present, re-executes with the target flow in the same message cycle so the user seamlessly enters the new flow without repeating themselves. Reply from the unknown flow is concatenated with the handoff flow's reply
 
 #### Added
-- Conversational prompts (`src/lib/llm/prompts.ts`): `unknownConversationSystemPrompt()` (Portuguese, instructs LLM to act as friendly CAAB WhatsApp assistant, keep replies short, never mention being AI, return JSON `{"reply": "..."}`) and `unknownConversationUserPrompt(text, chatHistory)`
+- Conversational prompts (`src/lib/llm/prompts.ts`): `unknownConversationSystemPrompt()` (Portuguese, instructs LLM to act as friendly CAAB WhatsApp assistant, keep replies short, never mention being AI, return JSON `{"reply": "..."}`) and `unknownConversationUserPrompt(text, chatHistory, turnCount)`
+- Turn count context: `unknownConversationUserPrompt` now includes `Turno da conversa: N` so the LLM knows how far into the conversation it is. System prompt rule 6 instructs the LLM to be more direct and mention available services naturally on later turns
 
 #### Fixed
 - Routing orchestrator (`src/lib/routing/routeMessage.ts`): skip topic shift detection when `activeFlow === "unknown"` — the unknown flow already handles its own intent classification via `classifyFlow()` inside step handlers; running the topic shift detector on top caused false positives on ambiguous/conversational messages (e.g. casual greetings misclassified as `general_support`)
