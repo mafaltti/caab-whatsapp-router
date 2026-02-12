@@ -216,7 +216,7 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
         correlationId,
       });
 
-      reply = reply + "\n\n" + handoffResult.reply;
+      reply = handoffResult.reply;
       nextState = handoffResult.nextState;
       done = handoffResult.done;
     }

@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 #### Fixed
 - Routing orchestrator (`src/lib/routing/routeMessage.ts`): skip topic shift detection when `activeFlow === "unknown"` — the unknown flow already handles its own intent classification via `classifyFlow()` inside step handlers; running the topic shift detector on top caused false positives on ambiguous/conversational messages (e.g. casual greetings misclassified as `general_support`)
+- Routing orchestrator (`src/lib/routing/routeMessage.ts`): on `_handoff_flow`, replace the reply with the target flow's reply instead of concatenating — the conversational LLM reply becomes stale once intent is classified, so showing both produced contradictory messages (e.g. "Posso ajudar com algo?" followed by "Entendi que você precisa de suporte")
 
 ### Phase 6 — Digital Certificate Flow Implementation
 #### Added
