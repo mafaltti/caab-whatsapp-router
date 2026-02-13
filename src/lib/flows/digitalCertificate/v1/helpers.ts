@@ -109,10 +109,10 @@ export function detectFieldToCorrect(text: string): string | null {
     return FIELD_ORDER[num - 1];
   }
 
-  // Keyword match
+  // Keyword match (word boundaries prevent "pf" matching inside "cpf")
   for (const [field, keywords] of Object.entries(FIELD_KEYWORDS)) {
     for (const kw of keywords) {
-      if (lower.includes(kw)) return field;
+      if (new RegExp(`\\b${kw}\\b`).test(lower)) return field;
     }
   }
 
