@@ -63,14 +63,14 @@ export function extractDigits(text: string): string {
 export function normalizeSpokenEmail(text: string): string {
   let result = text.toLowerCase().trim();
 
-  // "arroba" / "aroba" → @
-  result = result.replace(/\s*(arroba|aroba|at)\s*/g, "@");
+  // "arroba" / "aroba" / "at" → @ (word boundaries prevent matching inside words like "contato")
+  result = result.replace(/\s*\b(arroba|aroba|at)\b\s*/g, "@");
 
-  // "ponto" → . (but not "ponto com" as a single phrase first)
-  result = result.replace(/\s*ponto\s*/g, ".");
+  // "ponto" → . (word boundary prevents matching inside words like "apontamento")
+  result = result.replace(/\s*\bponto\b\s*/g, ".");
 
-  // "dot" → .
-  result = result.replace(/\s*dot\s*/g, ".");
+  // "dot" → . (word boundary prevents matching inside words like "dotado")
+  result = result.replace(/\s*\bdot\b\s*/g, ".");
 
   // Remove spaces around @ and .
   result = result.replace(/\s*@\s*/g, "@");
