@@ -26,17 +26,9 @@ async function getConversationalReply(
       systemPrompt: unknownConversationSystemPrompt(),
       userPrompt: unknownConversationUserPrompt(text, chatHistory, turnCount),
       correlationId,
+      jsonMode: false,
     });
-    const parsed: unknown = JSON.parse(result.content);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "reply" in parsed &&
-      typeof (parsed as Record<string, unknown>).reply === "string"
-    ) {
-      return (parsed as Record<string, unknown>).reply as string;
-    }
-    return null;
+    return result.content.trim() || null;
   } catch (err) {
     logger.warn({
       correlation_id: correlationId,

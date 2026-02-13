@@ -10,14 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Conversational unknown flow — replaces static menu with a natural LLM chat loop that greets users and identifies intent through dialogue
 - Seamless flow handoff — when intent is detected during the unknown conversation, the user enters the target flow in the same message cycle without repeating themselves
 - Turn count awareness — LLM becomes more direct and mentions available services on later conversation turns
+- Safety override handling — when a crisis message triggers Groq's `json_validate_failed` error with a compassionate response, the model-generated crisis text (CVV 188, SAMU 192) is forwarded to the user instead of a generic error
 
 ### Changed
 - LLM model switched from `llama-3.3-70b-versatile` to `openai/gpt-oss-120b`
+- Unknown flow now uses LLM text mode (`jsonMode: false`) for natural conversation instead of JSON-wrapped replies
 - Rewrite CLAUDE.md from 451-line spec document to ~86-line lean system prompt — removed content that duplicates code/docs, corrected model name, documented jsonMode text-mode exception, unknown flow conversational behavior, topic-shift skip rule, and added "No PII in logs" as Rule 7
 
 ### Fixed
 - Topic shift no longer triggers during the unknown flow conversation, preventing casual messages from being misrouted
 - Handoff replies no longer show contradictory double messages (stale conversational reply + target flow reply)
+- Crisis/self-harm messages no longer receive "dificuldades técnicas" generic error — they now receive the LLM's safety-generated crisis response
 
 ## [0.6.0] - 2026-02-12
 

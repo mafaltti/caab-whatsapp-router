@@ -20,7 +20,7 @@ export {
   type SubrouteDefinition,
   SUBROUTE_CONFIG,
 } from "./schemas";
-export { callLlm, type LlmCallOptions, type LlmCallResult } from "./client";
+export { callLlm, SafetyOverrideError, type LlmCallOptions, type LlmCallResult } from "./client";
 export { classifyFlow, type ClassifyFlowResult } from "./globalRouter";
 export { detectTopicShift } from "./topicShift";
 export {

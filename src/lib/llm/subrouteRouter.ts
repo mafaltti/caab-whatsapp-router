@@ -6,7 +6,7 @@ import {
   SUBROUTE_CONFIG,
 } from "./schemas";
 import { subrouteRouterSystemPrompt, subrouteRouterUserPrompt } from "./prompts";
-import { callLlm } from "./client";
+import { callLlm, SafetyOverrideError } from "./client";
 
 export type ClassifySubrouteResult =
   | { ok: true; data: SubrouteRouterResult }
@@ -53,6 +53,7 @@ export async function classifySubroute(
     });
     rawContent = result.content;
   } catch (err) {
+    if (err instanceof SafetyOverrideError) throw err;
     logger.error({
       correlation_id: correlationId,
       event: "classify_subroute_llm_error",

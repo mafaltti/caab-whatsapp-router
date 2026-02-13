@@ -1,5 +1,5 @@
 import { logger } from "@/lib/shared";
-import { classifySubroute, CONFIDENCE_ACCEPT } from "@/lib/llm";
+import { classifySubroute, CONFIDENCE_ACCEPT, SafetyOverrideError } from "@/lib/llm";
 import { getFlowDefinition } from "./registry";
 import type {
   FlowContext,
@@ -160,6 +160,7 @@ export async function executeFlow(
       done,
     };
   } catch (err) {
+    if (err instanceof SafetyOverrideError) throw err;
     logger.error({
       correlation_id: correlationId,
       event: "step_execution_error",

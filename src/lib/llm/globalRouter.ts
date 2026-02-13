@@ -2,7 +2,7 @@ import { logger } from "@/lib/shared";
 import type { ChatMessage } from "@/lib/db";
 import { GlobalRouterSchema, type GlobalRouterResult } from "./schemas";
 import { globalRouterSystemPrompt, globalRouterUserPrompt } from "./prompts";
-import { callLlm } from "./client";
+import { callLlm, SafetyOverrideError } from "./client";
 
 export type ClassifyFlowResult =
   | { ok: true; data: GlobalRouterResult }
@@ -28,6 +28,7 @@ export async function classifyFlow(
     });
     rawContent = result.content;
   } catch (err) {
+    if (err instanceof SafetyOverrideError) throw err;
     logger.error({
       correlation_id: correlationId,
       event: "classify_flow_llm_error",

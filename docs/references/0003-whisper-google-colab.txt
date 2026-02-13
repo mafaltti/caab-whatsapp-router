@@ -1,0 +1,14 @@
+Whisper Large Turbo in Free Google Colab for Transcription - Step-by-Step Tutorial
+
+https://www.fahdmirza.com/blogs/whisper-large-turbo-in-free-google
+
+https://www.youtube.com/watch?v=0Rdf2XA9G9Y&t=63s
+
+Tips to make it work on Jupyter Notebook (NOT VIABLE)
+https://share.google/aimode/roET9kagal6r7Ra8z
+
+Top Speech Recognition API Free Options in 2025
+https://anotherwrapper.com/blog/speech-recognition-api-free
+
+IBM Watson Speech to Text - 500 minutes / month
+Google Cloud Speech-to-Text API - 60 minutes / month

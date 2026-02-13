@@ -11,6 +11,7 @@ import { sendText } from "@/lib/evolution";
 import {
   classifyFlow,
   detectTopicShift,
+  SafetyOverrideError,
   CONFIDENCE_ACCEPT,
   CONFIDENCE_CLARIFY,
   type FlowType,
@@ -254,6 +255,36 @@ export async function routeMessage(options: RouteMessageOptions): Promise<void> 
       });
     });
   } catch (err) {
+    if (err instanceof SafetyOverrideError) {
+      logger.info({
+        correlation_id: correlationId,
+        event: "safety_override",
+        user_id: message.userId,
+        instance: message.instanceName,
+      });
+
+      await sendText(
+        message.instanceName,
+        message.remoteJid,
+        err.failedGeneration,
+        correlationId,
+      );
+
+      insertOutbound(message.userId, message.instanceName, err.failedGeneration).catch(
+        (persistErr) => {
+          logger.error({
+            correlation_id: correlationId,
+            event: "outbound_persist_error",
+            user_id: message.userId,
+            instance: message.instanceName,
+            error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+          });
+        },
+      );
+
+      return;
+    }
+
     logger.error({
       correlation_id: correlationId,
       event: "route_message_error",

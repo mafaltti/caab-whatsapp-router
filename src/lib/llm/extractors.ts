@@ -24,7 +24,7 @@ import {
   phoneExtractionSystemPrompt,
   phoneExtractionUserPrompt,
 } from "./prompts";
-import { callLlm } from "./client";
+import { callLlm, SafetyOverrideError } from "./client";
 
 export type ExtractionErrorType =
   | "llm_error"
@@ -58,6 +58,7 @@ async function extractWithLlm<T>(options: {
     });
     rawContent = result.content;
   } catch (err) {
+    if (err instanceof SafetyOverrideError) throw err;
     logger.error({
       correlation_id: correlationId,
       event: `${eventPrefix}_llm_error`,

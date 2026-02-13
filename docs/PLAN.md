@@ -1,6 +1,6 @@
 # Complete and detailed plan (Next.js + Vercel deployment)
 
-## Phase 0 — Bootstrap Next.js + TypeScript Project
+## Phase 0 — Bootstrap Next.js + TypeScript Project ✅
 **Goal:** Set up Next.js app with TypeScript, dev environment, and basic structure.
 
 ### Prerequisites
@@ -62,7 +62,7 @@
 
 ---
 
-## Phase 0.5 — Multi-Environment Supabase Setup
+## Phase 0.5 — Multi-Environment Supabase Setup ✅
 **Goal:** Configure separate Supabase projects for staging and production, aligned with [Supabase Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments) guidelines.
 
 ### Environment Mapping
@@ -103,7 +103,7 @@
 
 ---
 
-## Phase 1 — Supabase schema + repositories
+## Phase 1 — Supabase schema + repositories ✅
 **Goal:** reliable persistence for state, history, and idempotency.
 
 - Create `supabase/migrations/YYYYMMDD001_init.sql` (use `supabase migration new init`):
@@ -132,7 +132,7 @@
 
 ---
 
-## Phase 2 — Webhook Endpoint + Evolution API Normalization
+## Phase 2 — Webhook Endpoint + Evolution API Normalization ✅
 **Goal:** Receive Evolution webhooks and normalize to internal format.
 
 ### Implementation
@@ -180,7 +180,7 @@
 
 ---
 
-## Phase 3 — Processing pipeline (guards + dedupe + history)
+## Phase 3 — Processing pipeline (guards + dedupe + history) ✅
 **Goal:** safe, idempotent processing.
 
 Order of operations per message:
@@ -195,7 +195,7 @@ Order of operations per message:
 
 ---
 
-## Phase 4 — Routing layer A: topic shift + global flow selection
+## Phase 4 — Routing layer A: topic shift + global flow selection ✅
 **Goal:** choose the correct top-level flow even mid-conversation.
 
 Implement:
@@ -215,7 +215,7 @@ Also implement initial global routing for new sessions:
 
 ---
 
-## Phase 4.5 — Groq LLM Integration
+## Phase 4.5 — Groq LLM Integration ✅
 **Goal:** Implement LLM client with rotating API keys and strict validation.
 
 ### Implementation
@@ -269,7 +269,7 @@ Also implement initial global routing for new sessions:
 
 ---
 
-## Phase 5 — Flow framework + deterministic step machine
+## Phase 5 — Flow framework + deterministic step machine ✅
 **Goal:** a consistent way to implement flows/subroutes/steps.
 
 Implement a standard handler signature, e.g.:
@@ -287,7 +287,7 @@ Where `nextState` includes:
 
 ---
 
-## Phase 6 — Digital Certificate Flow Implementation
+## Phase 6 — Digital Certificate Flow Implementation ✅
 **Goal:** Complete end-to-end flow for digital certificate requests with all subroutes.
 
 ### Flow Structure

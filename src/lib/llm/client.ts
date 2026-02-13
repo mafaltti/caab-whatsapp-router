@@ -1,6 +1,16 @@
 import Groq from "groq-sdk";
-import { RateLimitError } from "groq-sdk/error";
+import { BadRequestError, RateLimitError } from "groq-sdk/error";
 import { logger } from "@/lib/shared";
+
+export class SafetyOverrideError extends Error {
+  readonly failedGeneration: string;
+
+  constructor(failedGeneration: string) {
+    super("LLM safety override: json_validate_failed");
+    this.name = "SafetyOverrideError";
+    this.failedGeneration = failedGeneration;
+  }
+}
 
 const MODEL = "openai/gpt-oss-120b";
 const DEFAULT_MAX_TOKENS = 500;
@@ -29,6 +39,7 @@ export interface LlmCallOptions {
   correlationId?: string;
   maxTokens?: number;
   temperature?: number;
+  jsonMode?: boolean;
 }
 
 export interface LlmCallResult {
@@ -45,6 +56,7 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
     correlationId,
     maxTokens = DEFAULT_MAX_TOKENS,
     temperature = DEFAULT_TEMPERATURE,
+    jsonMode = true,
   } = options;
 
   const keys = getApiKeys();
@@ -65,7 +77,7 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
         model: MODEL,
         temperature,
         max_tokens: maxTokens,
-        response_format: { type: "json_object" },
+        ...(jsonMode && { response_format: { type: "json_object" as const } }),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -97,6 +109,24 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
           duration_ms: durationMs,
         });
         continue;
+      }
+
+      if (err instanceof BadRequestError) {
+        const body = err.error as Record<string, unknown> | undefined;
+        const inner = body?.error as Record<string, unknown> | undefined;
+        if (
+          inner?.code === "json_validate_failed" &&
+          typeof inner?.failed_generation === "string" &&
+          inner.failed_generation.length > 0
+        ) {
+          logger.info({
+            correlation_id: correlationId,
+            event: "llm_safety_override_detected",
+            model: MODEL,
+            duration_ms: durationMs,
+          });
+          throw new SafetyOverrideError(inner.failed_generation);
+        }
       }
 
       logger.error({

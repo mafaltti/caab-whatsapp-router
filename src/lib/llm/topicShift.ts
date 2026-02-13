@@ -7,7 +7,7 @@ import {
   CONFIDENCE_ACCEPT,
 } from "./schemas";
 import { topicShiftSystemPrompt, topicShiftUserPrompt } from "./prompts";
-import { callLlm } from "./client";
+import { callLlm, SafetyOverrideError } from "./client";
 
 // --- Tier 1: Rule-based keyword matching ---
 
@@ -152,7 +152,8 @@ export async function detectTopicShift(
     }
 
     return null; // favor continuity
-  } catch {
+  } catch (err) {
+    if (err instanceof SafetyOverrideError) throw err;
     return null; // on error, stay in current flow
   }
 }
