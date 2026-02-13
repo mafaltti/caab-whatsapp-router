@@ -69,6 +69,7 @@ export const handleAskPersonType: StepHandler = async (ctx) => {
     data: {
       person_type: result.data.person_type,
       _asked_person_type: false,
+      _asked_cpf_cnpj: nextStep === "ask_cpf_cnpj" ? true : undefined,
       _correcting: nextStep === "confirm" ? false : state.data._correcting,
       person_type_retry_count: 0,
     },
@@ -135,6 +136,7 @@ export const handleAskCpfCnpj: StepHandler = async (ctx) => {
     data: {
       cpf_cnpj: result.data.cpf_cnpj,
       _asked_cpf_cnpj: false,
+      _asked_email: nextStep === "ask_email" ? true : undefined,
       _correcting: nextStep === "confirm" ? false : state.data._correcting,
       cpf_cnpj_retry_count: 0,
     },
@@ -191,6 +193,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
     data: {
       email: result.data.email,
       _asked_email: false,
+      _asked_phone: nextStep === "ask_phone" ? true : undefined,
       _correcting: nextStep === "confirm" ? false : state.data._correcting,
       email_retry_count: 0,
     },

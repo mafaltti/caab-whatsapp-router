@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Groq `json_validate_failed` system errors (e.g. "max completion tokens reached") no longer leak to end users as SafetyOverrideError — they are now treated as regular LLM errors
 - `detectConfirmation()` now handles audio transcriptions — regex fast-path with word-boundary matching, plus LLM fallback for ambiguous responses (e.g. "exatamente", "bora", "fechou"). Fixed in both generalSupport and digitalCertificate flows
 - General support empty summary — LLM returning empty content no longer renders `**`; falls back to truncated user text
+- Digital certificate purchase flow no longer asks each field twice — step transitions now set the next step's `_asked_*` flag so the user's first response is processed immediately. Also fixed in renewal subroute
+- Removed rigid "(sim/não)" hints from all confirmation prompts — conversation feels more natural now that LLM fallback handles any phrasing
 
 ### Added (prior unreleased)
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`

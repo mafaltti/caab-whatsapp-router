@@ -43,6 +43,7 @@ export const handleAskOrderId: StepHandler = async (ctx) => {
     data: {
       order_id: text,
       _asked_order_id: false,
+      _asked_email: true,
       order_id_retry_count: 0,
     },
   };
