@@ -53,7 +53,7 @@ export const HUMAN_HANDOFF_REPLY =
 // --- Confirmation detection ---
 
 const YES_PATTERNS =
-  /\b(sim|correto|certo|ok|isso|exato|confirmo|positivo|yes|está certo|tá certo|ta certo|por favor|pode sim|quero)\b/i;
+  /\b(sim|correto|certo|ok|isso|exato|exatamente|confirmo|positivo|yes|está certo|tá certo|ta certo|por favor|pode sim|quero|claro|com certeza|pode ser)\b/i;
 const NO_PATTERNS =
   /\b(não|nao|errado|incorreto|negativo|no|nope|tá errado|ta errado|está errado|não quero|nao quero)\b/i;
 
