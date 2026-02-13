@@ -302,6 +302,29 @@ export function phoneExtractionUserPrompt(text: string): string {
   return `Mensagem do usuario: ${text}`;
 }
 
+// --- General Support Summary Prompts ---
+
+export function generalSupportSummarySystemPrompt(): string {
+  return `Você é um assistente que resume problemas de suporte. Resuma o problema do usuário em no máximo 50 caracteres, em português brasileiro, de forma clara e direta.
+
+Regras:
+1. Máximo 50 caracteres.
+2. Não use aspas, ponto final ou prefixos como "Resumo:".
+3. Seja direto e objetivo.
+
+Exemplos:
+Problema: "Meu certificado digital não está funcionando no navegador Chrome, já tentei reinstalar"
+Resumo: certificado digital não funciona no Chrome
+
+Problema: "Preciso de ajuda com o pagamento do boleto que venceu"
+Resumo: boleto vencido`;
+}
+
+export function generalSupportSummaryUserPrompt(text: string): string {
+  return `Problema: "${text}"
+Resumo:`;
+}
+
 // --- Unknown Conversational Prompts ---
 
 export function unknownConversationSystemPrompt(): string {

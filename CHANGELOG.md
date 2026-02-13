@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- General support flow enhanced with LLM-powered problem summary, human handoff confirmation (sim/não), and protocol ID generation (`GS-YYYYMMDD-XXXX`) — replaces bare-bones stub that immediately escalated
 - Billing flow with invoice status subroute — replaces "coming soon" stub with a functional flow that collects invoice/order number and returns mock payment status (paid, pending, or overdue)
 - Invoice status lookup with mock data keyed on last digit of the invoice ID
 - Retry tracking (max 3 attempts) with human handoff on repeated invalid input
