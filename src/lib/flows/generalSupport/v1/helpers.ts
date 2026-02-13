@@ -19,13 +19,13 @@ export function generateProtocolId(): string {
 // --- Confirmation detection ---
 
 const YES_PATTERNS =
-  /^(sim|s|correto|certo|ok|isso|exato|confirmo|positivo|yes|y|está certo|tá certo|ta certo)$/i;
+  /\b(sim|correto|certo|ok|isso|exato|confirmo|positivo|yes|está certo|tá certo|ta certo|por favor|pode sim|quero)\b/i;
 const NO_PATTERNS =
-  /^(não|nao|n|errado|incorreto|negativo|no|nope|tá errado|ta errado|está errado)$/i;
+  /\b(não|nao|errado|incorreto|negativo|no|nope|tá errado|ta errado|está errado|não quero|nao quero)\b/i;
 
 export function detectConfirmation(text: string): "yes" | "no" | "unclear" {
-  const trimmed = text.trim();
-  if (YES_PATTERNS.test(trimmed)) return "yes";
-  if (NO_PATTERNS.test(trimmed)) return "no";
+  const cleaned = text.trim().replace(/[.,!?]+$/g, "");
+  if (YES_PATTERNS.test(cleaned)) return "yes";
+  if (NO_PATTERNS.test(cleaned)) return "no";
   return "unclear";
 }

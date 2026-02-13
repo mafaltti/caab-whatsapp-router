@@ -27,6 +27,9 @@ export const handleAwaitingProblem: StepHandler = async (ctx) => {
       maxTokens: 100,
     });
     summary = result.content.trim();
+    if (!summary) {
+      summary = problem.length > 50 ? problem.slice(0, 50) + "..." : problem;
+    }
   } catch (err) {
     logger.error({
       correlation_id: ctx.correlationId,
