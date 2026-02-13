@@ -1,0 +1,1 @@
+export { routeMessage } from "./routeMessage";

@@ -9,6 +9,14 @@ This document specifies the exact behavior of each conversation flow, including 
 3. **General Support** (`general_support`) - Catch-all
 4. **Unknown** (`unknown`) - Clarification
 
+### Flow Versioning
+
+Flow source files live in `src/lib/flows/<name>/v1/`. Each `FlowDefinition` carries `version` (e.g. `"v1"`) and `active: boolean` fields. The registry is a flat array and `getFlowDefinition(flowId)` returns the active version. To pin a flow to a specific version at runtime, set the `FLOW_VERSION_OVERRIDES` env var (e.g. `FLOW_VERSION_OVERRIDES=digital_certificate=v1`). To add v2: create `v2/` alongside `v1/`, set `active: true` on v2 and `active: false` on v1, register both in `registry.ts`.
+
+### Adding a Flow
+
+Create definition in `src/lib/flows/<name>/v1/`, register in `registry.ts`, add flow ID to `FLOW_VALUES` in `schemas.ts`.
+
 ---
 
 ## Flow 1: Digital Certificate
@@ -540,56 +548,31 @@ Posso ajudar com mais alguma coisa?
 
 #### Steps
 
-##### Step 1: `ask_order_id_status`
+##### Single step: `ask_order_id`
 
-**Bot Question**:
+**First turn** — asks for the order/protocol number:
 ```
-Qual o número do seu pedido ou protocolo?
-```
-
-**Expected**: Order ID (e.g., "CERT-2026-12345")
-
-**Validation**: Extract alphanumeric ID
-
-**Next Step**: `lookup_status`
-
----
-
-##### Step 2: `lookup_status`
-
-**Action**: Query database/system for order status
-
-**For MVP**: Mock response with random status
-
-**Bot Message**:
-```
-Status do pedido [CERT-2026-12345]:
-
-📊 Status: [Em processamento / Aguardando documentos / Concluído / Enviado]
-📅 Última atualização: [11/02/2026 às 14:30]
-
-[Additional details based on status]:
-- Em processamento: "Seu certificado está sendo processado pela autoridade certificadora."
-- Aguardando documentos: "Falta enviar: [list of missing docs]"
-- Concluído: "Certificado emitido! Você receberá um email com instruções."
-- Enviado: "Certificado enviado para [email] em [date]"
+Para consultar o status, preciso do número do seu pedido ou protocolo.
 ```
 
-**For Production**: Replace mock with actual API call to billing/order system
-
-**Next Step**: `done_status`
-
----
-
-##### Step 3: `done_status`
-
-**Bot Message**:
+**Second turn** — validates length (>= 3 chars), performs mock lookup, and returns a response with `done: true`:
 ```
-Mais alguma dúvida sobre seu pedido?
+Encontrei seu pedido *CERT-2026-12345*:
+
+*Status:* Em processamento
+Seu pedido está sendo analisado pela equipe. Previsão: 2 dias úteis.
+
+Se precisar de mais alguma coisa, é só enviar uma mensagem!
 ```
 
-**If user has more questions**: Continue in this flow or route to support
-**If user says no**: Clear session
+**Mock status logic**: based on last digit of order ID:
+- 0–3 → "Em processamento"
+- 4–6 → "Aguardando validação"
+- 7–9 → "Concluído"
+
+**Validation**: If input < 3 characters, asks again (with retry counter). After max retries, offers human handoff.
+
+**For Production**: Replace mock with actual API call to order system.
 
 ---
 
@@ -615,69 +598,34 @@ Mais alguma dúvida sobre seu pedido?
 
 #### Steps
 
-##### Step 1: `ask_invoice_id`
+##### Single step: `ask_invoice_id`
 
-**Bot Question**:
+**First turn** — asks for the invoice/order number:
 ```
 Para consultar sua fatura, preciso do número da nota fiscal ou do pedido.
 
 Pode me enviar?
 ```
 
-**Expected**: Invoice/order number
-
-**Validation**: Extract alphanumeric ID
-
-**State Update**:
-```json
-{
-  "data": {
-    "invoice_id": "INV-2026-12345"
-  }
-}
+**Second turn** — validates length (>= 3 chars), performs mock lookup, and returns a response with `done: true`:
 ```
-
-**Next Step**: `lookup_invoice`
-
----
-
-##### Step 2: `lookup_invoice`
-
-**Action**: Query billing system (mock for MVP)
-
-**For MVP**: Mock response:
-```
-Fatura #[INV-2026-12345]:
+Fatura #INV-2026-12345:
 
 💰 Valor: R$ 350,00
 📅 Vencimento: 15/02/2026
-📊 Status: [Pago / Pendente / Vencido]
+📊 Status: Pendente
 
-[If Pendente or Vencido]:
-Para pagar, use o código PIX ou boleto que enviamos no email [email].
-
-Precisa de ajuda? Digite "boleto" para reenviar.
+Se precisar de mais alguma coisa, é só enviar uma mensagem!
 ```
 
-**Status Logic**:
-- **Pago**: "✅ Pagamento confirmado em [date]. Obrigado!"
-- **Pendente**: Show payment instructions
-- **Vencido**: "⚠️ Fatura vencida. Entre em contato para negociar."
+**Mock status logic**: based on last digit of invoice ID:
+- 0–3 → "Pendente" (with payment instructions)
+- 4–6 → "Pago" (confirmation message)
+- 7–9 → "Vencido" (overdue notice)
 
-**For Production**: Replace with API call to billing system
+**Validation**: If input < 3 characters, asks again (with retry counter). After max retries, offers human handoff.
 
-**Next Step**: `done_billing`
-
----
-
-##### Step 3: `done_billing`
-
-**Bot Message**:
-```
-Posso ajudar com mais alguma coisa relacionada a pagamentos?
-```
-
-**Session Cleanup**: Standard cleanup
+**For Production**: Replace mock with actual billing API call.
 
 ---
 
@@ -685,126 +633,128 @@ Posso ajudar com mais alguma coisa relacionada a pagamentos?
 
 **Flow ID**: `general_support`
 
-**Description**: Catch-all for questions that don't fit other flows.
+**Description**: Catch-all for questions that don't fit other flows. Collects the user's problem, generates an LLM summary, and offers human handoff.
 
 **Entry Triggers**:
 - **Keywords**: "ajuda", "suporte", "dúvida", "problema"
 - **LLM Classification**: When no other flow matches with confidence >= 0.80
 
-**No subroutes** - Single linear flow
+**No subroutes** - Single linear flow (3 steps)
 
 ---
 
 ### Steps
 
-##### Step 1: `ask_details`
+##### Step 1: `start`
 
-**Bot Question**:
+**Bot Message**:
 ```
 Como posso ajudar você?
 
 Por favor, descreva sua dúvida ou problema.
 ```
 
-**Expected**: Free-form text
-
-**Validation**: None (accept any input)
-
-**Next Step**: `provide_answer`
+**Next Step**: `awaiting_problem`
 
 ---
 
-##### Step 2: `provide_answer`
-
-**For MVP**: Generic response + offer human handoff
+##### Step 2: `awaiting_problem`
 
 **Action**:
-1. Use LLM to generate brief topic summary (max 50 chars)
-2. Offer human handoff
+1. Takes the user's free-form problem description
+2. Calls LLM (text mode, `maxTokens: 100`) to generate a brief summary of the problem
+3. If LLM fails: truncates the original text to 50 chars as fallback summary
+4. Stores both `problem` and `summary` in step data
+5. Offers human handoff
 
 **Bot Message**:
 ```
-Entendo que você precisa de ajuda com [LLM summary of topic].
+Entendo que você precisa de ajuda com *[LLM summary]*.
 
 Para melhor atendê-lo, posso transferir você para um atendente humano.
 
 Deseja falar com um atendente? (sim/não)
 ```
 
-**For Production**:
-- Search knowledge base using LLM
-- Generate helpful response
-- Still offer human handoff if not resolved
+**Next Step**: `awaiting_handoff`
+
+---
+
+##### Step 3: `awaiting_handoff`
+
+**Expected**: "sim", "não", or unclear input
 
 **If SIM**:
-- **Action**: Mark session for human handoff (store in DB)
-- **Message**: "Ok! Um atendente entrará em contato em breve."
-- **Next Step**: `done_support`
+- Generates a protocol ID
+- Marks `handoff_requested: true` with timestamp in step data
+- **Message**: "Entendido! Vou transferir você para um atendente humano.\n\nSeu protocolo de atendimento: *[PROTOCOL]*\n\nUm atendente entrará em contato em breve pelo WhatsApp."
+- `done: true`
 
 **If NÃO**:
-- **Next Step**: `done_support`
+- **Message**: "Obrigado! Se precisar de mais ajuda, é só me chamar."
+- `done: true`
+
+**If unclear**:
+- **Message**: "Por favor, responda sim ou não. Deseja falar com um atendente?"
+- Stays at `awaiting_handoff`
+
+**Session Cleanup**: Standard (session cleared on `done: true`)
 
 ---
 
-##### Step 3: `done_support`
-
-**Bot Message**:
-```
-Obrigado! Se precisar de mais ajuda, é só me chamar.
-```
-
-**Session Cleanup**: Standard
-
----
-
-## Flow 4: Unknown
+## Flow 4: Unknown (Conversational)
 
 **Flow ID**: `unknown`
 
-**Description**: When LLM cannot classify user intent with confidence >= 0.80.
+**Description**: Conversational LLM flow that handles ambiguous intents through natural dialogue, attempting to identify the user's need and hand off to the appropriate flow.
 
 **Entry Triggers**:
 - **LLM Classification**: Confidence < 0.80
 - **Ambiguous input**: First message like "Oi", "Olá", "Preciso de ajuda"
 
-**No subroutes** - Single step
+**No subroutes** - Two steps, conversational
 
 ---
 
+### Behavior
+
+This is NOT a static menu. The unknown flow uses the LLM in text mode (`jsonMode: false`) to have a natural conversation with the user. On every turn it also runs `classifyFlow()` in the background to detect intent. When intent is detected with confidence >= 0.80, the step sets `_handoff_flow` in step data and `routeMessage` performs a seamless handoff to the target flow on the next message.
+
+A static menu is only shown as a **fallback** when the LLM call fails or the conversation exceeds the turn limit.
+
+**Turn limit**: 5 turns. After 5 turns without a confident classification, the flow shows the static menu and ends the session.
+
 ### Steps
 
-##### Step 1: `clarify_intent`
+##### Step 1: `start`
 
-**Bot Message** (show menu):
+**Action**: Called on the first message.
+1. Calls LLM (text mode) to generate a natural conversational reply
+2. Runs `classifyFlow()` on the user's message
+3. If classification confidence >= 0.80: returns `_handoff_flow` in data (handoff happens on next message)
+4. If not: moves to `awaiting_reply` with `_turn_count: 1`
+5. If LLM fails: falls back to static menu and ends session
+
+##### Step 2: `awaiting_reply`
+
+**Action**: Called on subsequent turns.
+1. Increments turn count
+2. Calls LLM (text mode) for a conversational reply
+3. Runs `classifyFlow()` on the user's message
+4. If classification confidence >= 0.80: returns `_handoff_flow` (handoff on next message)
+5. If turn count >= 5: shows static menu and ends session (`done: true`)
+6. Otherwise: continues conversation at `awaiting_reply`
+
+**Static menu fallback**:
 ```
-Olá! 👋 Sou o assistente virtual da [Nome da Empresa].
+Como posso te ajudar?
 
-Posso ajudar com:
-
-1️⃣ **Certificado Digital**
-   • Comprar novo certificado
-   • Renovar certificado
-   • Suporte técnico
-
-2️⃣ **Pagamentos e Faturas**
-   • Consultar status de fatura
-   • Informações sobre pagamento
-
-3️⃣ **Suporte Geral**
-   • Outras dúvidas
-
-Por favor, escolha uma opção (1, 2 ou 3) ou descreva como posso ajudar.
+1️⃣ Certificado Digital
+2️⃣ Faturamento
+3️⃣ Suporte Geral
 ```
 
-**Expected**:
-- "1", "certificado", "preciso de certificado"
-- "2", "fatura", "boleto", "pagamento"
-- "3", "suporte", "ajuda"
-- Free-form description
-
-**Action**: Run global router again with user's new message
-
-**Next Step**: Route to appropriate flow based on classification
+**Handoff mechanism**: When `_handoff_flow` is set in step data, `routeMessage` detects it on the next cycle, clears the unknown session, and routes the user to the target flow (e.g. `digital_certificate`, `billing`, `general_support`).
 
 ---
 
@@ -1065,41 +1015,41 @@ Bot: Olá! Para consultar um protocolo, preciso do número dele...
 ## Implementation Checklist
 
 ### Phase 1 - Digital Certificate Purchase (MVP)
-- [ ] Implement all 6 steps (ask_person_type → done)
-- [ ] LLM extraction for CPF/CNPJ, email, phone
-- [ ] Validation logic with retry handling
-- [ ] Confirmation step with data masking
-- [ ] Protocol number generation
-- [ ] Session state persistence
+- [x] Implement all 6 steps (ask_person_type → done)
+- [x] LLM extraction for CPF/CNPJ, email, phone
+- [x] Validation logic with retry handling
+- [x] Confirmation step with data masking
+- [x] Protocol number generation
+- [x] Session state persistence
 
 ### Phase 2 - Other Digital Certificate Subroutes
-- [ ] Renewal flow (4 steps)
-- [ ] Support flow (4 steps)
-- [ ] Requirements flow (2 steps)
-- [ ] Status flow (3 steps)
-- [ ] Subroute selection via LLM
+- [x] Renewal flow
+- [x] Support flow
+- [x] Requirements flow
+- [x] Status flow (single-step with mock lookup)
+- [x] Subroute selection via LLM
 
 ### Phase 3 - Billing Flow
-- [ ] Invoice status lookup (3 steps)
-- [ ] Mock billing data for testing
+- [x] Invoice status lookup (single-step with mock data)
+- [x] Mock billing data for testing
 - [ ] Integration with real billing API (production)
 
 ### Phase 4 - Support Flows
-- [ ] General support flow
-- [ ] Unknown/clarification flow
-- [ ] Human handoff marking (phase 2: actual handoff)
+- [x] General support flow (LLM summary + human handoff)
+- [x] Unknown/conversational flow (LLM-driven with handoff)
+- [x] Human handoff marking (phase 2: actual handoff)
 
 ### Phase 5 - Advanced Features
-- [ ] Topic shift detection
+- [x] Topic shift detection
 - [ ] Command detection (reset, cancel, menu)
-- [ ] Session expiry handling
+- [x] Session expiry handling
 - [ ] Rate limiting response
 
 ---
 
 ## Future Enhancements
 
-### Phase 2 (Post-MVP)
+### Near-term
 1. **Rich Media Support**:
    - Accept images for document upload (in support flow)
    - Send confirmation with WhatsApp buttons (Evolution API feature)
@@ -1109,8 +1059,13 @@ Bot: Olá! Para consultar um protocolo, preciso do número dele...
 3. **Conversation Context**:
    - Remember user's previous protocols
    - Proactive: "Vejo que você comprou um certificado em Jan. Quer renovar?"
+4. **Command Detection**:
+   - Reset/cancel commands ("reiniciar", "cancelar")
+   - Menu command ("menu", "opções")
+5. **Rate Limiting**:
+   - Throttle rapid message senders
 
-### Phase 3 (Advanced)
+### Long-term
 1. **Multi-language**:
    - Detect language (Portuguese vs English)
    - Localized responses

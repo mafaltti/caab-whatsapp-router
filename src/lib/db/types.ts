@@ -1,4 +1,3 @@
-Connecting to db 5432
 export type Json =
   | string
   | number
@@ -35,7 +34,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          created_at: string
+          direction: string
+          id: number
+          instance: string
+          media_type: string | null
+          message_id: string | null
+          text: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: number
+          instance: string
+          media_type?: string | null
+          message_id?: string | null
+          text?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: number
+          instance?: string
+          media_type?: string | null
+          message_id?: string | null
+          text?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversation_state: {
+        Row: {
+          active_flow: string | null
+          active_subroute: string | null
+          data: Json
+          expires_at: string
+          instance: string
+          step: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_flow?: string | null
+          active_subroute?: string | null
+          data?: Json
+          expires_at?: string
+          instance: string
+          step?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_flow?: string | null
+          active_subroute?: string | null
+          data?: Json
+          expires_at?: string
+          instance?: string
+          step?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
