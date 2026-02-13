@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - LLM model switched from `llama-3.3-70b-versatile` to `openai/gpt-oss-120b`
+- Rewrite CLAUDE.md from 451-line spec document to ~86-line lean system prompt — removed content that duplicates code/docs, corrected model name, documented jsonMode text-mode exception, unknown flow conversational behavior, topic-shift skip rule, and added "No PII in logs" as Rule 7
 
 ### Fixed
 - Topic shift no longer triggers during the unknown flow conversation, preventing casual messages from being misrouted
