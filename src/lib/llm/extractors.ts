@@ -149,11 +149,16 @@ export async function extractEmail(options: {
   const normalized = normalizeSpokenEmail(options.text);
   const emailMatch = normalized.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
   if (emailMatch) {
-    logger.info({
-      correlation_id: options.correlationId,
-      event: "extract_email_fast_path",
-    });
-    return { ok: true, data: { email: emailMatch[0], confidence: 0.9 } };
+    const email = emailMatch[0];
+    const [local, domain] = email.split("@");
+    // Only accept fast-path if parts look reasonable (reject garbled audio like "cont@o.com")
+    if (local.length >= 3 && domain.length >= 5) {
+      logger.info({
+        correlation_id: options.correlationId,
+        event: "extract_email_fast_path",
+      });
+      return { ok: true, data: { email, confidence: 0.9 } };
+    }
   }
 
   return extractWithLlm<EmailExtractionResult>({

@@ -68,13 +68,18 @@ export const handleAskEmail: StepHandler = async (ctx) => {
 
   const result = await extractEmail({ text: message.text, correlationId });
 
+  const isAudio = message.mediaType === "audio";
+  const typeHint = isAudio
+    ? " Para facilitar, tente *digitar* o email."
+    : "";
+
   if (
     !result.ok ||
     !result.data.email ||
     result.data.confidence < CONFIDENCE_ACCEPT
   ) {
     return {
-      reply: "Não consegui identificar um email válido. Por favor, envie seu email (ex: nome@empresa.com).",
+      reply: `Não consegui identificar um email válido.${typeHint} Envie seu email (ex: nome@empresa.com).`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };
@@ -82,7 +87,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
 
   if (!isValidEmail(result.data.email)) {
     return {
-      reply: "O email informado parece inválido. Envie um email válido (ex: nome@empresa.com).",
+      reply: `O email informado parece inválido.${typeHint} Envie um email válido (ex: nome@empresa.com).`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };

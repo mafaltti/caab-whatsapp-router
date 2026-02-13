@@ -23,7 +23,11 @@ export function isValidCpfCnpj(
 }
 
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  const [local, domain] = email.split("@");
+  // Reject garbled audio transcriptions (e.g. "cont@o.com", "o@x.com")
+  if (local.length < 3 || domain.length < 5) return false;
+  return true;
 }
 
 export function isValidPhone(digits: string): boolean {
