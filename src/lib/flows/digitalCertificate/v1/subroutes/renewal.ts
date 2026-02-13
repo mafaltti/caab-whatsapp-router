@@ -1,4 +1,4 @@
-import type { StepHandler } from "../../types";
+import type { StepHandler } from "../../../types";
 import { CONFIDENCE_ACCEPT } from "@/lib/llm/schemas";
 import { extractEmail } from "@/lib/llm/extractors";
 import { isValidEmail } from "../validation";

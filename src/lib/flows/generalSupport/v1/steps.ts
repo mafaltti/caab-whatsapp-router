@@ -4,7 +4,7 @@ import {
   generalSupportSummaryUserPrompt,
 } from "@/lib/llm/prompts";
 import { logger } from "@/lib/shared";
-import type { StepHandler } from "../types";
+import type { StepHandler } from "../../types";
 import { generateProtocolId, detectConfirmation } from "./helpers";
 
 export const handleStart: StepHandler = async () => {

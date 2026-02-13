@@ -24,6 +24,8 @@ export interface FlowSubrouteDefinition {
 
 export interface FlowDefinition {
   id: string;
+  version: string;
+  active: boolean;
   steps: Record<string, StepHandler>;
   subroutes?: Record<string, FlowSubrouteDefinition>;
 }

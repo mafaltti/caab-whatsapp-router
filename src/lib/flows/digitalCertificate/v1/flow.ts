@@ -1,4 +1,4 @@
-import type { FlowDefinition } from "../types";
+import type { FlowDefinition } from "../../types";
 import { handleStart } from "./steps";
 import {
   handleAskPersonType,
@@ -24,8 +24,10 @@ import {
 } from "./subroutes/requirements";
 import { handleAskOrderId as handleStatusAskOrderId } from "./subroutes/status";
 
-export const digitalCertificateFlow: FlowDefinition = {
+export const digitalCertificateFlowV1: FlowDefinition = {
   id: "digital_certificate",
+  version: "v1",
+  active: true,
   steps: { start: handleStart },
   subroutes: {
     purchase: {
