@@ -69,12 +69,6 @@ Returns: `{ reply, nextStep, data?, done? }`. Flows define steps as `Record<stri
 ### Session Lifecycle
 TTL: 30 min (expires_at). Expired sessions treated as new (no "session expired" message). `done: true` → clear session. `done: false` → upsert with refreshed TTL.
 
-### Flow Versioning
-Each `FlowDefinition` has `version` (e.g. `"v1"`) and `active: boolean`. The registry is a flat array; `getFlowDefinition(flowId)` returns the active version (or an env-overridden version). Set `FLOW_VERSION_OVERRIDES=digital_certificate=v1` to pin a flow to a specific version at runtime. Flow files live in `src/lib/flows/<name>/v1/`. To add v2: create `v2/` alongside `v1/`, set `active: true` on v2 and `active: false` on v1, register both in `registry.ts`.
-
-### Adding a Flow
-Create definition in `src/lib/flows/<name>/v1/`, register in `registry.ts`, add flow ID to `FLOW_VALUES` in `schemas.ts`.
-
 ## Coding Guidance
 - **Implementation order**: DB migration → regen types → repo layer → flow/step handlers → LLM prompts/schemas → wire into routing.
 - Keep changes small, testable, commit frequently.
