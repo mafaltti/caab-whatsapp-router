@@ -1,9 +1,10 @@
 import Groq from "groq-sdk";
-import { RateLimitError } from "groq-sdk/error";
+import { RateLimitError, APIConnectionTimeoutError } from "groq-sdk/error";
 import { logger } from "@/lib/shared";
 
 const MODEL = "whisper-large-v3";
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 15000;
+const MAX_TIMEOUT_RETRIES = 1;
 const TRANSCRIPTION_PROMPT =
   "Transcrição de conversa por WhatsApp. O usuário pode ditar: " +
   "endereços de email (ex: contato@empresa.com, nome@gmail.com), " +
@@ -32,6 +33,7 @@ export async function transcribeAudio(
 ): Promise<string> {
   const keys = getApiKeys();
   const maxAttempts = keys.length;
+  let timeoutRetries = 0;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const apiKey = nextKey(keys);
@@ -82,6 +84,22 @@ export async function transcribeAudio(
           attempt: attempt + 1,
           duration_ms: durationMs,
         });
+        continue;
+      }
+
+      if (
+        err instanceof APIConnectionTimeoutError &&
+        timeoutRetries < MAX_TIMEOUT_RETRIES
+      ) {
+        timeoutRetries++;
+        logger.warn({
+          correlation_id: correlationId,
+          event: "stt_timeout_retry",
+          model: MODEL,
+          attempt: timeoutRetries,
+          duration_ms: durationMs,
+        });
+        attempt--; // retry with same key rotation position
         continue;
       }
 
