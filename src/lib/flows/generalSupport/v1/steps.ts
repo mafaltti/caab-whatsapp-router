@@ -50,7 +50,7 @@ export const handleAwaitingProblem: StepHandler = async (ctx) => {
 };
 
 export const handleAwaitingHandoff: StepHandler = async (ctx) => {
-  const confirmation = detectConfirmation(ctx.message.text);
+  const confirmation = await detectConfirmation(ctx.message.text, ctx.correlationId);
 
   if (confirmation === "yes") {
     const protocolId = generateProtocolId();

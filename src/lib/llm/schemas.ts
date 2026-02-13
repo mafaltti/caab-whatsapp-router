@@ -69,6 +69,13 @@ export const PhoneExtractionSchema = z.object({
 });
 export type PhoneExtractionResult = z.infer<typeof PhoneExtractionSchema>;
 
+export const ConfirmationExtractionSchema = z.object({
+  answer: z.enum(["yes", "no", "unclear"]),
+});
+export type ConfirmationExtractionResult = z.infer<
+  typeof ConfirmationExtractionSchema
+>;
+
 // --- Subroute Configuration ---
 
 export interface SubrouteDefinition {

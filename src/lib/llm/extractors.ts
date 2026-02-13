@@ -11,6 +11,8 @@ import {
   type EmailExtractionResult,
   PhoneExtractionSchema,
   type PhoneExtractionResult,
+  ConfirmationExtractionSchema,
+  type ConfirmationExtractionResult,
 } from "./schemas";
 import {
   dataExtractionSystemPrompt,
@@ -23,6 +25,8 @@ import {
   emailExtractionUserPrompt,
   phoneExtractionSystemPrompt,
   phoneExtractionUserPrompt,
+  confirmationExtractionSystemPrompt,
+  confirmationExtractionUserPrompt,
 } from "./prompts";
 import { callLlm, SafetyOverrideError } from "./client";
 
@@ -181,6 +185,21 @@ export async function extractPhone(options: {
     userPrompt: phoneExtractionUserPrompt(options.text),
     schema: PhoneExtractionSchema,
     eventPrefix: "extract_phone",
+    correlationId: options.correlationId,
+  });
+}
+
+// --- Confirmation Extractor ---
+
+export async function extractConfirmation(options: {
+  text: string;
+  correlationId?: string;
+}): Promise<ExtractResult<ConfirmationExtractionResult>> {
+  return extractWithLlm<ConfirmationExtractionResult>({
+    systemPrompt: confirmationExtractionSystemPrompt(),
+    userPrompt: confirmationExtractionUserPrompt(options.text),
+    schema: ConfirmationExtractionSchema,
+    eventPrefix: "extract_confirmation",
     correlationId: options.correlationId,
   });
 }

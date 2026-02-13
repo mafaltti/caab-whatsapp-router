@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - LLM no longer incorrectly tells users it can't hear them — unknown flow prompt now confirms audio/voice message support
 - Groq `json_validate_failed` system errors (e.g. "max completion tokens reached") no longer leak to end users as SafetyOverrideError — they are now treated as regular LLM errors
-- `detectConfirmation()` now handles audio transcriptions — switched from exact-match (`^...$`) to word-boundary (`\b...\b`) matching, strips trailing punctuation, and adds common spoken patterns ("por favor", "pode sim", "quero"). Fixed in both generalSupport and digitalCertificate flows
+- `detectConfirmation()` now handles audio transcriptions — regex fast-path with word-boundary matching, plus LLM fallback for ambiguous responses (e.g. "exatamente", "bora", "fechou"). Fixed in both generalSupport and digitalCertificate flows
 - General support empty summary — LLM returning empty content no longer renders `**`; falls back to truncated user text
 
 ### Added (prior unreleased)

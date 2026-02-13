@@ -2,6 +2,9 @@
  * Shared utilities for digital certificate subroutes.
  */
 
+import { extractConfirmation } from "@/lib/llm";
+import { logger } from "@/lib/shared";
+
 const MAX_RETRIES = 3;
 
 // --- Protocol ID ---
@@ -57,10 +60,25 @@ const YES_PATTERNS =
 const NO_PATTERNS =
   /\b(não|nao|errado|incorreto|negativo|no|nope|tá errado|ta errado|está errado|não quero|nao quero)\b/i;
 
-export function detectConfirmation(text: string): "yes" | "no" | "unclear" {
+export async function detectConfirmation(
+  text: string,
+  correlationId?: string,
+): Promise<"yes" | "no" | "unclear"> {
   const cleaned = text.trim().replace(/[.,!?]+$/g, "");
   if (YES_PATTERNS.test(cleaned)) return "yes";
   if (NO_PATTERNS.test(cleaned)) return "no";
+
+  // LLM fallback for ambiguous responses (e.g. audio transcriptions)
+  const result = await extractConfirmation({ text: cleaned, correlationId });
+  if (result.ok) {
+    logger.info({
+      correlation_id: correlationId,
+      event: "confirmation_llm_fallback",
+      answer: result.data.answer,
+    });
+    return result.data.answer;
+  }
+
   return "unclear";
 }
 

@@ -26,7 +26,7 @@ export const handleShowInfo: StepHandler = async () => {
 
 export const handleOfferPurchase: StepHandler = async (ctx) => {
   const { message } = ctx;
-  const answer = detectConfirmation(message.text);
+  const answer = await detectConfirmation(message.text, ctx.correlationId);
 
   if (answer === "yes") {
     return {

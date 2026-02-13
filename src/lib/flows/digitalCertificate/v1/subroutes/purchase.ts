@@ -251,7 +251,7 @@ export const handleAskPhone: StepHandler = async (ctx) => {
 
 export const handleConfirm: StepHandler = async (ctx) => {
   const { message } = ctx;
-  const answer = detectConfirmation(message.text);
+  const answer = await detectConfirmation(message.text, ctx.correlationId);
 
   if (answer === "yes") {
     const protocol = generateProtocolId();

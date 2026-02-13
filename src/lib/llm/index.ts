@@ -33,5 +33,6 @@ export {
   extractCpfCnpj,
   extractEmail,
   extractPhone,
+  extractConfirmation,
   extractData,
 } from "./extractors";

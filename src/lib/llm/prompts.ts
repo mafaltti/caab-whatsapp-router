@@ -329,6 +329,37 @@ export function phoneExtractionUserPrompt(text: string): string {
   return `Mensagem do usuario: ${text}${hint}`;
 }
 
+// --- Confirmation Detection Prompts ---
+
+export function confirmationExtractionSystemPrompt(): string {
+  return `Você classifica se a mensagem do usuário é uma confirmação (sim), negação (não), ou indefinida.
+
+A mensagem pode vir de transcrição de áudio e conter variações informais.
+
+Responda APENAS com JSON válido no formato:
+{"answer": "yes"|"no"|"unclear"}
+
+Exemplos:
+"Sim" → {"answer": "yes"}
+"Não" → {"answer": "no"}
+"Exatamente" → {"answer": "yes"}
+"Claro que sim" → {"answer": "yes"}
+"De jeito nenhum" → {"answer": "no"}
+"Pode ser" → {"answer": "yes"}
+"Acho que não" → {"answer": "no"}
+"Vamos lá" → {"answer": "yes"}
+"Quero sim" → {"answer": "yes"}
+"Não quero" → {"answer": "no"}
+"Bora" → {"answer": "yes"}
+"Fechou" → {"answer": "yes"}
+"É isso aí" → {"answer": "yes"}
+"Preciso pensar" → {"answer": "unclear"}`;
+}
+
+export function confirmationExtractionUserPrompt(text: string): string {
+  return `Mensagem do usuario: ${text}`;
+}
+
 // --- General Support Summary Prompts ---
 
 export function generalSupportSummarySystemPrompt(): string {
