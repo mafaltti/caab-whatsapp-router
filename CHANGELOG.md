@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Billing flow with invoice status subroute — replaces "coming soon" stub with a functional flow that collects invoice/order number and returns mock payment status (paid, pending, or overdue)
+- Invoice status lookup with mock data keyed on last digit of the invoice ID
+- Retry tracking (max 3 attempts) with human handoff on repeated invalid input
 - Conversational unknown flow — replaces static menu with a natural LLM chat loop that greets users and identifies intent through dialogue
 - Seamless flow handoff — when intent is detected during the unknown conversation, the user enters the target flow in the same message cycle without repeating themselves
 - Turn count awareness — LLM becomes more direct and mentions available services on later conversation turns

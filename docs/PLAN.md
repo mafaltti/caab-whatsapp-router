@@ -380,7 +380,7 @@ Steps in order:
 
 ---
 
-## Phase 8 — LLM implementation (providers + schemas + prompts)
+## Phase 8 — LLM implementation (providers + schemas + prompts) ✅
 **Goal:** stable JSON outputs and safe fallbacks.
 
 - Centralize:

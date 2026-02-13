@@ -3,9 +3,8 @@ import type { StepHandler } from "../types";
 export const handleStart: StepHandler = async () => {
   return {
     reply:
-      "Entendi que você precisa de ajuda com faturamento! " +
-      "Em breve vou te guiar pelo processo. Por enquanto, aguarde que estamos implementando o fluxo completo.",
+      "Posso te ajudar com faturamento! Vou consultar o status da sua fatura.\n\n" +
+      "Me conte o que você precisa.",
     nextStep: "start",
-    done: true,
   };
 };
