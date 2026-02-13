@@ -40,6 +40,7 @@ export type Database = {
           direction: string
           id: number
           instance: string
+          media_type: string | null
           message_id: string | null
           text: string | null
           user_id: string
@@ -49,6 +50,7 @@ export type Database = {
           direction: string
           id?: number
           instance: string
+          media_type?: string | null
           message_id?: string | null
           text?: string | null
           user_id: string
@@ -58,6 +60,7 @@ export type Database = {
           direction?: string
           id?: number
           instance?: string
+          media_type?: string | null
           message_id?: string | null
           text?: string | null
           user_id?: string

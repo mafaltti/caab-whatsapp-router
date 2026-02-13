@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Audio message support (speech-to-text) — voice messages are now transcribed via Groq Whisper (`whisper-large-v3-turbo`) and fed into the existing message pipeline as text
+- Groq STT client (`src/lib/stt/`) with round-robin API key rotation and automatic retry on rate limits, reusing the same `GROQ_API_KEYS` env var
+- Evolution API media download (`getMediaBase64`) to fetch audio from WhatsApp via the `getBase64FromMediaMessage` endpoint
+- `media_type` column on `chat_messages` to track message origin (e.g. `"audio"`) alongside transcribed text
+- Graceful fallback — when transcription fails, the bot replies asking the user to send text instead
+
+### Changed
+- Media auto-reply updated to mention audio is now supported ("texto ou áudio" instead of only "texto")
+- Audio messages no longer blocked by guards — they pass through with `requiresAudioTranscription` flag
+
+### Fixed
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`
 - All flow files moved into `v1/` subdirectories (e.g. `flows/billing/v1/flow.ts`) to support side-by-side v2 development
 - General support flow enhanced with LLM-powered problem summary, human handoff confirmation (sim/não), and protocol ID generation (`GS-YYYYMMDD-XXXX`) — replaces bare-bones stub that immediately escalated

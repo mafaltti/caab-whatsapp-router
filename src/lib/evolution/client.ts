@@ -10,6 +10,57 @@ function getConfig() {
   return { baseUrl, apiKey };
 }
 
+export interface MediaBase64Result {
+  base64: string;
+  mimetype: string;
+  fileName: string;
+}
+
+export async function getMediaBase64(
+  instance: string,
+  messageId: string,
+  correlationId?: string,
+): Promise<MediaBase64Result> {
+  const { baseUrl, apiKey } = getConfig();
+  const url = `${baseUrl}/chat/getBase64FromMediaMessage/${instance}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: apiKey,
+    },
+    body: JSON.stringify({ message: { key: { id: messageId } } }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    const errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+    logger.error({
+      correlation_id: correlationId,
+      event: "media_download_failed",
+      instance,
+      error: errorMsg,
+    });
+    throw new Error(`Failed to download media: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+
+  logger.info({
+    correlation_id: correlationId,
+    event: "media_downloaded",
+    instance,
+    mimetype: data.mimetype,
+  });
+
+  return {
+    base64: data.base64,
+    mimetype: data.mimetype ?? "audio/ogg",
+    fileName: data.fileName ?? "audio.ogg",
+  };
+}
+
 export async function sendText(
   instance: string,
   remoteJid: string,

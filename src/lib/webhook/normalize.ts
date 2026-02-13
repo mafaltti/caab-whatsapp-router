@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import type { NormalizedMessage, GuardResult } from "@/lib/shared/types";
 
 const MEDIA_AUTO_REPLY =
-  "Por favor, envie sua mensagem em formato de texto. No momento não consigo processar imagens, áudios ou documentos.";
+  "Por favor, envie sua mensagem em formato de texto ou áudio. No momento não consigo processar imagens, vídeos ou documentos.";
 
 const EvolutionMessageSchema = z.object({
   conversation: z.string().optional(),
@@ -41,7 +41,7 @@ const EvolutionWebhookSchema = z.object({
 
 export type EvolutionWebhookPayload = z.infer<typeof EvolutionWebhookSchema>;
 
-type MessageType = "text" | "media" | "sticker" | "unknown";
+type MessageType = "text" | "audio" | "media" | "sticker" | "unknown";
 
 function getMessageType(
   message: z.infer<typeof EvolutionMessageSchema> | undefined,
@@ -49,10 +49,10 @@ function getMessageType(
   if (!message) return "unknown";
 
   if (message.conversation || message.extendedTextMessage?.text) return "text";
+  if (message.audioMessage) return "audio";
   if (message.stickerMessage) return "sticker";
   if (
     message.imageMessage ||
-    message.audioMessage ||
     message.videoMessage ||
     message.documentMessage ||
     message.locationMessage ||
@@ -90,6 +90,8 @@ export function normalizeMessage(payload: unknown): NormalizedMessage | null {
     timestamp = new Date();
   }
 
+  const messageType = getMessageType(message);
+
   return {
     userId,
     messageId: key.id,
@@ -99,6 +101,7 @@ export function normalizeMessage(payload: unknown): NormalizedMessage | null {
     isGroup,
     remoteJid: key.remoteJid,
     timestamp,
+    ...(messageType === "audio" && { mediaType: "audio" as const }),
   };
 }
 
@@ -119,6 +122,14 @@ export function applyGuards(
   }
 
   const messageType = getMessageType(rawPayload.data.message);
+
+  if (messageType === "audio") {
+    return {
+      shouldProcess: true,
+      requiresAutoReply: false,
+      requiresAudioTranscription: true,
+    };
+  }
 
   if (messageType !== "text") {
     if (messageType === "sticker") {

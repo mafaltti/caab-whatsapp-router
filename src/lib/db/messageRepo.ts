@@ -19,6 +19,7 @@ export async function insertInboundIfNew(
   userId: string,
   instance: string,
   text: string | null,
+  mediaType?: string | null,
 ): Promise<boolean> {
   const { error } = await supabase.from("chat_messages").insert({
     user_id: userId,
@@ -26,6 +27,7 @@ export async function insertInboundIfNew(
     direction: "in",
     message_id: messageId,
     text,
+    ...(mediaType && { media_type: mediaType }),
   });
 
   if (error) {

@@ -7,6 +7,7 @@ export interface NormalizedMessage {
   isGroup: boolean;
   remoteJid: string;
   timestamp: Date;
+  mediaType?: "audio" | null;
 }
 
 export interface GuardResult {
@@ -14,4 +15,5 @@ export interface GuardResult {
   reason?: string;
   requiresAutoReply: boolean;
   autoReplyText?: string;
+  requiresAudioTranscription?: boolean;
 }
