@@ -119,13 +119,19 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
           typeof inner?.failed_generation === "string" &&
           inner.failed_generation.length > 0
         ) {
-          logger.info({
-            correlation_id: correlationId,
-            event: "llm_safety_override_detected",
-            model: MODEL,
-            duration_ms: durationMs,
-          });
-          throw new SafetyOverrideError(inner.failed_generation);
+          // Groq system error messages are not safety overrides
+          const isGroqError =
+            inner.failed_generation.includes("max completion tokens") ||
+            inner.failed_generation.includes("failed to generate");
+          if (!isGroqError) {
+            logger.info({
+              correlation_id: correlationId,
+              event: "llm_safety_override_detected",
+              model: MODEL,
+              duration_ms: durationMs,
+            });
+            throw new SafetyOverrideError(inner.failed_generation);
+          }
         }
       }
 

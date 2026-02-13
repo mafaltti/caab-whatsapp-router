@@ -1,5 +1,5 @@
 import type { ZodType } from "zod/v4";
-import { logger } from "@/lib/shared";
+import { logger, extractDigits } from "@/lib/shared";
 import {
   DataExtractionSchema,
   type DataExtractionResult,
@@ -114,6 +114,18 @@ export async function extractCpfCnpj(options: {
   expectedType?: "PF" | "PJ" | null;
   correlationId?: string;
 }): Promise<ExtractResult<CpfCnpjExtractionResult>> {
+  // Fast path: try direct digit extraction (handles spoken numbers from audio)
+  const digits = extractDigits(options.text);
+  const expectedLen = options.expectedType === "PJ" ? 14 : 11;
+  if (digits.length === expectedLen) {
+    logger.info({
+      correlation_id: options.correlationId,
+      event: "extract_cpf_cnpj_fast_path",
+      digit_count: digits.length,
+    });
+    return { ok: true, data: { cpf_cnpj: digits, confidence: 0.95 } };
+  }
+
   return extractWithLlm<CpfCnpjExtractionResult>({
     systemPrompt: cpfCnpjExtractionSystemPrompt(
       options.expectedType ?? null,
@@ -142,6 +154,17 @@ export async function extractPhone(options: {
   text: string;
   correlationId?: string;
 }): Promise<ExtractResult<PhoneExtractionResult>> {
+  // Fast path: try direct digit extraction (handles spoken numbers from audio)
+  const digits = extractDigits(options.text);
+  if (digits.length >= 10 && digits.length <= 11) {
+    logger.info({
+      correlation_id: options.correlationId,
+      event: "extract_phone_fast_path",
+      digit_count: digits.length,
+    });
+    return { ok: true, data: { phone: digits, confidence: 0.95 } };
+  }
+
   return extractWithLlm<PhoneExtractionResult>({
     systemPrompt: phoneExtractionSystemPrompt(),
     userPrompt: phoneExtractionUserPrompt(options.text),

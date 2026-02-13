@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import { RateLimitError } from "groq-sdk/error";
 import { logger } from "@/lib/shared";
 
-const MODEL = "whisper-large-v3-turbo";
+const MODEL = "whisper-large-v3";
 const TIMEOUT_MS = 30000;
 
 function getApiKeys(): string[] {

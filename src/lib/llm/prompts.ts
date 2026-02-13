@@ -1,5 +1,6 @@
 import type { ChatMessage } from "@/lib/db";
 import type { SubrouteDefinition } from "./schemas";
+import { spokenToDigits } from "@/lib/shared";
 
 export function formatChatHistory(messages: ChatMessage[]): string {
   if (messages.length === 0) return "(sem histórico)";
@@ -232,6 +233,8 @@ Regras:
 1. Retorne APENAS os dígitos, sem pontos, traços ou barras.
 2. Se não encontrar um número válido, retorne null.
 3. CPF tem exatamente 11 dígitos. CNPJ tem exatamente 14 dígitos.
+4. A mensagem pode vir de transcrição de áudio. Números podem estar escritos por extenso (ex: "um dois três" = 123, "zero" = 0, "meia" = 6). Converta para dígitos.
+5. "meia" ou "meia dúzia" = 6. "quina" = 5.
 
 Responda APENAS com JSON válido no formato:
 {"cpf_cnpj": "digits"|null, "confidence": 0.00}
@@ -243,12 +246,20 @@ Mensagem: "123.456.789-00"
 Mensagem: "12.345.678/0001-90"
 {"cpf_cnpj": "12345678000190", "confidence": 0.98}
 
+Mensagem: "um dois três quatro cinco seis sete oito nove zero zero"
+{"cpf_cnpj": "12345678900", "confidence": 0.90}
+
+Mensagem: "três cinco dois meia oito um quatro zero zero dois sete"
+{"cpf_cnpj": "35268140027", "confidence": 0.88}
+
 Mensagem: "Não tenho agora"
 {"cpf_cnpj": null, "confidence": 0.85}`;
 }
 
 export function cpfCnpjExtractionUserPrompt(text: string): string {
-  return `Mensagem do usuario: ${text}`;
+  const normalized = spokenToDigits(text);
+  const hint = normalized !== text.toLowerCase() ? `\nNormalizado: ${normalized}` : "";
+  return `Mensagem do usuario: ${text}${hint}`;
 }
 
 export function emailExtractionSystemPrompt(): string {
@@ -283,6 +294,7 @@ Regras:
 1. Retorne APENAS os dígitos do telefone (DDD + número), sem parênteses, traços ou espaços.
 2. Se não encontrar um telefone, retorne null.
 3. Telefones brasileiros têm DDD (2 dígitos) + número (8 ou 9 dígitos).
+4. A mensagem pode vir de transcrição de áudio. Números podem estar escritos por extenso (ex: "um um" = 11, "nove" = 9, "meia" = 6). Converta para dígitos.
 
 Responda APENAS com JSON válido no formato:
 {"phone": "digits"|null, "confidence": 0.00}
@@ -294,12 +306,17 @@ Mensagem: "(11) 99999-8888"
 Mensagem: "11 98765-4321"
 {"phone": "11987654321", "confidence": 0.95}
 
+Mensagem: "um um nove oito sete meia cinco quatro três dois um"
+{"phone": "11987654321", "confidence": 0.88}
+
 Mensagem: "Não quero informar"
 {"phone": null, "confidence": 0.85}`;
 }
 
 export function phoneExtractionUserPrompt(text: string): string {
-  return `Mensagem do usuario: ${text}`;
+  const normalized = spokenToDigits(text);
+  const hint = normalized !== text.toLowerCase() ? `\nNormalizado: ${normalized}` : "";
+  return `Mensagem do usuario: ${text}${hint}`;
 }
 
 // --- General Support Summary Prompts ---
