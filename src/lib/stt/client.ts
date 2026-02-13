@@ -7,7 +7,8 @@ const TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_RETRIES = 1;
 const TRANSCRIPTION_PROMPT =
   "Transcrição de conversa por WhatsApp. O usuário pode ditar: " +
-  "endereços de email (ex: contato@empresa.com, nome@gmail.com), " +
+  "endereços de email falando 'arroba' para @ e 'ponto' para . " +
+  "(ex: 'contato arroba empresa ponto com' = contato@empresa.com), " +
   "números de CPF (ex: 123.456.789-00), CNPJ, ou telefones com DDD.";
 
 function getApiKeys(): string[] {

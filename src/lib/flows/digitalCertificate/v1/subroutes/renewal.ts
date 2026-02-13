@@ -79,7 +79,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
     result.data.confidence < CONFIDENCE_ACCEPT
   ) {
     return {
-      reply: `Não consegui identificar um email válido.${typeHint} Envie seu email (ex: nome@empresa.com).`,
+      reply: `Não consegui identificar um email válido.${typeHint} Envie seu email.`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };
@@ -87,7 +87,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
 
   if (!isValidEmail(result.data.email)) {
     return {
-      reply: `O email informado parece inválido.${typeHint} Envie um email válido (ex: nome@empresa.com).`,
+      reply: `O email informado parece inválido.${typeHint} Envie um email válido.`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };

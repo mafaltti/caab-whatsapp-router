@@ -173,7 +173,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
     result.data.confidence < CONFIDENCE_ACCEPT
   ) {
     return {
-      reply: `Não consegui identificar um email válido.${typeHint} Envie seu email (ex: nome@empresa.com).`,
+      reply: `Não consegui identificar um email válido.${typeHint} Envie seu email.`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };
@@ -181,7 +181,7 @@ export const handleAskEmail: StepHandler = async (ctx) => {
 
   if (!isValidEmail(result.data.email)) {
     return {
-      reply: `O email informado parece inválido.${typeHint} Envie um email válido (ex: nome@empresa.com).`,
+      reply: `O email informado parece inválido.${typeHint} Envie um email válido.`,
       nextStep: "ask_email",
       data: incrementRetry(state.data, "email"),
     };
@@ -275,6 +275,23 @@ export const handleConfirm: StepHandler = async (ctx) => {
   }
 
   if (answer === "no") {
+    // Check if user already mentioned which field to correct
+    const field = detectFieldToCorrect(message.text);
+    if (field) {
+      const step = FIELD_TO_STEP[field];
+      const askedKey = `_asked_${field}` as string;
+      return {
+        reply: getReaskMessage(field),
+        nextStep: step,
+        data: {
+          [field]: null,
+          [askedKey]: true,
+          _correcting: true,
+          [`${field}_retry_count`]: 0,
+        },
+      };
+    }
+
     return {
       reply:
         "Sem problemas! Qual dado você gostaria de corrigir?\n\n" +

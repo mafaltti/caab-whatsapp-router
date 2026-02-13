@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Audio message support (speech-to-text) — voice messages are now transcribed via Groq Whisper (`whisper-large-v3`) and fed into the existing message pipeline as text
 - Groq STT client (`src/lib/stt/`) with round-robin API key rotation and automatic retry on rate limits, reusing the same `GROQ_API_KEYS` env var
-- Whisper transcription prompt with context hints for emails, CPFs, CNPJs, and phone numbers — improves accuracy for dictated structured data
+- Whisper transcription prompt with context hints for emails (including spoken "arroba"/@, "ponto"/. patterns), CPFs, CNPJs, and phone numbers — improves accuracy for dictated structured data
 - Evolution API media download (`getMediaBase64`) to fetch audio from WhatsApp via the `getBase64FromMediaMessage` endpoint
 - `media_type` column on `chat_messages` to track message origin (e.g. `"audio"`) alongside transcribed text
 - Graceful fallback — when transcription fails, the bot replies asking the user to send text instead
@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Media auto-reply updated to mention audio is now supported ("texto ou áudio" instead of only "texto")
 - Audio messages no longer blocked by guards — they pass through with `requiresAudioTranscription` flag
 - LLM extraction prompts (CPF/CNPJ, phone, email) enhanced with spoken number/email examples and normalized text hints
+- STT timeout reduced from 30s to 15s with one automatic retry on timeout — transient hiccups recover quickly while worst case stays at 30s
 
 ### Fixed
 - LLM no longer incorrectly tells users it can't hear them — unknown flow prompt now confirms audio/voice message support
@@ -30,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - General support empty summary — LLM returning empty content no longer renders `**`; falls back to truncated user text
 - Digital certificate purchase flow no longer asks each field twice — step transitions now set the next step's `_asked_*` flag so the user's first response is processed immediately. Also fixed in renewal subroute
 - Removed rigid "(sim/não)" hints from all confirmation prompts — conversation feels more natural now that LLM fallback handles any phrasing
+- `normalizeSpokenEmail()` no longer mangles emails containing "at", "ponto", or "dot" as substrings (e.g. "contato" → "cont@o") — replacements now use `\b` word boundaries
+- Stricter email validation rejects garbled audio transcriptions with short local/domain parts (e.g. "cont@o.com", "o@x.com")
+- Email extraction from audio now suggests typing after failed attempt, since Whisper struggles with email dictation
+- Purchase confirmation now detects field name in rejection (e.g. "O e-mail está errado") and skips directly to correction instead of asking which field to fix
 
 ### Added (prior unreleased)
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`
