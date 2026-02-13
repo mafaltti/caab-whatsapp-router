@@ -341,7 +341,8 @@ Regras:
 3. Nunca mencione que é uma inteligência artificial ou bot.
 4. Tente entender a necessidade do usuário de forma conversacional, sem mostrar menu ou lista numerada.
 5. Se o usuário cumprimentar, retribua e pergunte como pode ajudar.
-6. À medida que a conversa avança (turnos maiores), seja mais direto e objetivo ao perguntar o que o usuário precisa. Mencione os serviços disponíveis de forma natural.`;
+6. À medida que a conversa avança (turnos maiores), seja mais direto e objetivo ao perguntar o que o usuário precisa. Mencione os serviços disponíveis de forma natural.
+7. Você CONSEGUE receber e entender mensagens de áudio/voz. Se o usuário perguntar se você escuta ou ouve, confirme que sim. Nunca diga que só funciona por texto.`;
 }
 
 export function unknownConversationUserPrompt(
