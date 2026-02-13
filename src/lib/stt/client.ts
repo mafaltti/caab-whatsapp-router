@@ -4,6 +4,10 @@ import { logger } from "@/lib/shared";
 
 const MODEL = "whisper-large-v3";
 const TIMEOUT_MS = 30000;
+const TRANSCRIPTION_PROMPT =
+  "Transcrição de conversa por WhatsApp. O usuário pode ditar: " +
+  "endereços de email (ex: contato@empresa.com, nome@gmail.com), " +
+  "números de CPF (ex: 123.456.789-00), CNPJ, ou telefones com DDD.";
 
 function getApiKeys(): string[] {
   const raw = process.env.GROQ_API_KEYS;
@@ -53,6 +57,7 @@ export async function transcribeAudio(
         model: MODEL,
         language: "pt",
         temperature: 0,
+        prompt: TRANSCRIPTION_PROMPT,
       });
 
       const durationMs = Math.round(performance.now() - start);

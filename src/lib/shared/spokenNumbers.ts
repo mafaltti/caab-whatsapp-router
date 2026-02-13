@@ -50,3 +50,37 @@ export function extractDigits(text: string): string {
   const converted = spokenToDigits(text);
   return converted.replace(/\D/g, "");
 }
+
+/**
+ * Normalizes spoken email patterns from Whisper transcriptions.
+ * Converts Portuguese speech patterns to email format.
+ *
+ * Examples:
+ *   "contato arroba empresa ponto com" → "contato@empresa.com"
+ *   "contato@danilo carneiro.com" → "contato@danilocarneiro.com"
+ *   "nome at gmail ponto com ponto br" → "nome@gmail.com.br"
+ */
+export function normalizeSpokenEmail(text: string): string {
+  let result = text.toLowerCase().trim();
+
+  // "arroba" / "aroba" → @
+  result = result.replace(/\s*(arroba|aroba|at)\s*/g, "@");
+
+  // "ponto" → . (but not "ponto com" as a single phrase first)
+  result = result.replace(/\s*ponto\s*/g, ".");
+
+  // "dot" → .
+  result = result.replace(/\s*dot\s*/g, ".");
+
+  // Remove spaces around @ and .
+  result = result.replace(/\s*@\s*/g, "@");
+  result = result.replace(/\s*\.\s*/g, ".");
+
+  // Remove remaining spaces (email addresses have no spaces)
+  // Only if it looks like an email (contains @)
+  if (result.includes("@")) {
+    result = result.replace(/\s+/g, "");
+  }
+
+  return result;
+}

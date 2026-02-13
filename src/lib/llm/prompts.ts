@@ -1,6 +1,6 @@
 import type { ChatMessage } from "@/lib/db";
 import type { SubrouteDefinition } from "./schemas";
-import { spokenToDigits } from "@/lib/shared";
+import { spokenToDigits, normalizeSpokenEmail } from "@/lib/shared";
 
 export function formatChatHistory(messages: ChatMessage[]): string {
   if (messages.length === 0) return "(sem histórico)";
@@ -266,8 +266,13 @@ export function emailExtractionSystemPrompt(): string {
   return `Você é um extrator de dados para um assistente de WhatsApp. Extraia o endereço de email da mensagem do usuário.
 
 Regras:
-1. Retorne o email exatamente como escrito pelo usuário.
+1. Retorne o email em minúsculas, sem espaços.
 2. Se não encontrar um email válido, retorne null.
+3. A mensagem pode vir de transcrição de áudio. Padrões falados comuns:
+   - "arroba" ou "aroba" = @
+   - "ponto" ou "dot" = .
+   - Espaços entre partes do email devem ser removidos.
+4. Se a linha "Normalizado:" estiver presente, use-a como referência principal.
 
 Responda APENAS com JSON válido no formato:
 {"email": "email"|null, "confidence": 0.00}
@@ -277,14 +282,19 @@ Mensagem: "Meu email é joao@empresa.com.br"
 {"email": "joao@empresa.com.br", "confidence": 0.98}
 
 Mensagem: "joao arroba empresa ponto com"
-{"email": "joao@empresa.com", "confidence": 0.75}
+{"email": "joao@empresa.com", "confidence": 0.85}
+
+Mensagem: "contato arroba danilo carneiro ponto com"
+{"email": "contato@danilocarneiro.com", "confidence": 0.85}
 
 Mensagem: "Não tenho email"
 {"email": null, "confidence": 0.90}`;
 }
 
 export function emailExtractionUserPrompt(text: string): string {
-  return `Mensagem do usuario: ${text}`;
+  const normalized = normalizeSpokenEmail(text);
+  const hint = normalized !== text.toLowerCase().trim() ? `\nNormalizado: ${normalized}` : "";
+  return `Mensagem do usuario: ${text}${hint}`;
 }
 
 export function phoneExtractionSystemPrompt(): string {

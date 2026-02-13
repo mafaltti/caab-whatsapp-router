@@ -1,5 +1,5 @@
 import type { ZodType } from "zod/v4";
-import { logger, extractDigits } from "@/lib/shared";
+import { logger, extractDigits, normalizeSpokenEmail } from "@/lib/shared";
 import {
   DataExtractionSchema,
   type DataExtractionResult,
@@ -141,6 +141,17 @@ export async function extractEmail(options: {
   text: string;
   correlationId?: string;
 }): Promise<ExtractResult<EmailExtractionResult>> {
+  // Fast path: normalize spoken email patterns (arroba → @, ponto → .)
+  const normalized = normalizeSpokenEmail(options.text);
+  const emailMatch = normalized.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+  if (emailMatch) {
+    logger.info({
+      correlation_id: options.correlationId,
+      event: "extract_email_fast_path",
+    });
+    return { ok: true, data: { email: emailMatch[0], confidence: 0.9 } };
+  }
+
   return extractWithLlm<EmailExtractionResult>({
     systemPrompt: emailExtractionSystemPrompt(),
     userPrompt: emailExtractionUserPrompt(options.text),

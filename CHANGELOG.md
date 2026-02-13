@@ -7,18 +7,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- Audio message support (speech-to-text) — voice messages are now transcribed via Groq Whisper (`whisper-large-v3-turbo`) and fed into the existing message pipeline as text
+- Audio message support (speech-to-text) — voice messages are now transcribed via Groq Whisper (`whisper-large-v3`) and fed into the existing message pipeline as text
 - Groq STT client (`src/lib/stt/`) with round-robin API key rotation and automatic retry on rate limits, reusing the same `GROQ_API_KEYS` env var
+- Whisper transcription prompt with context hints for emails, CPFs, CNPJs, and phone numbers — improves accuracy for dictated structured data
 - Evolution API media download (`getMediaBase64`) to fetch audio from WhatsApp via the `getBase64FromMediaMessage` endpoint
 - `media_type` column on `chat_messages` to track message origin (e.g. `"audio"`) alongside transcribed text
 - Graceful fallback — when transcription fails, the bot replies asking the user to send text instead
+- Spoken number conversion (`spokenToDigits`, `extractDigits`) — converts Portuguese number words from audio transcriptions to digits (e.g. "meia nove oito" → "698")
+- Fast-path extraction for CPF/CNPJ, phone, and email — bypasses LLM when direct digit/pattern extraction succeeds, reducing latency
+- Spoken email normalization (`normalizeSpokenEmail`) — converts "arroba" → @, "ponto" → ., removes spaces for dictated email addresses
 
 ### Changed
+- STT model upgraded from `whisper-large-v3-turbo` to `whisper-large-v3` for better transcription accuracy
 - Media auto-reply updated to mention audio is now supported ("texto ou áudio" instead of only "texto")
 - Audio messages no longer blocked by guards — they pass through with `requiresAudioTranscription` flag
+- LLM extraction prompts (CPF/CNPJ, phone, email) enhanced with spoken number/email examples and normalized text hints
 
 ### Fixed
 - LLM no longer incorrectly tells users it can't hear them — unknown flow prompt now confirms audio/voice message support
+- Groq `json_validate_failed` system errors (e.g. "max completion tokens reached") no longer leak to end users as SafetyOverrideError — they are now treated as regular LLM errors
 
 ### Added (prior unreleased)
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`
