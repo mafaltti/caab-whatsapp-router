@@ -1,9 +1,11 @@
-import type { FlowDefinition } from "../types";
+import type { FlowDefinition } from "../../types";
 import { handleStart } from "./steps";
 import { handleAskInvoiceId } from "./subroutes/status";
 
-export const billingFlow: FlowDefinition = {
+export const billingFlowV1: FlowDefinition = {
   id: "billing",
+  version: "v1",
+  active: true,
   steps: { start: handleStart },
   subroutes: {
     status: {

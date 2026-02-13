@@ -1,4 +1,4 @@
-import type { StepHandler } from "../../types";
+import type { StepHandler } from "../../../types";
 import { detectConfirmation } from "../helpers";
 
 // --- show_info ---

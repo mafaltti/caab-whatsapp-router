@@ -43,6 +43,10 @@ GROQ_API_KEYS=gsk_key1,gsk_key2,gsk_key3
 WEBHOOK_SECRET=your-optional-webhook-secret
 LOG_LEVEL=debug
 NODE_ENV=development
+
+# Flow version overrides (comma-separated key=value)
+# Pin specific flows to a version for rollback, e.g.: digital_certificate=v1,billing=v1
+# FLOW_VERSION_OVERRIDES=
 ```
 
 **Important**: Never commit `.env.local` to git. It's already in `.gitignore`.

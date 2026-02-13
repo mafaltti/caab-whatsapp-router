@@ -5,7 +5,7 @@ import {
   unknownConversationUserPrompt,
 } from "@/lib/llm/prompts";
 import { logger } from "@/lib/shared";
-import type { StepHandler } from "../types";
+import type { StepHandler } from "../../types";
 
 const STATIC_MENU =
   "Como posso te ajudar?\n\n" +
