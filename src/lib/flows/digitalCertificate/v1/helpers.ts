@@ -158,7 +158,7 @@ export function formatPurchaseSummary(data: Record<string, unknown>): string {
     `2. ${pt === "PJ" ? "CNPJ" : "CPF"}: ${formatCpfCnpj(doc, pt)}\n` +
     `3. Email: ${email}\n` +
     `4. Telefone: ${formatPhone(phone)}\n\n` +
-    "Está tudo correto? (sim/não)"
+    "Está tudo correto?"
   );
 }
 
@@ -170,7 +170,7 @@ export function formatRenewalSummary(data: Record<string, unknown>): string {
     "Confira seus dados de renovação:\n\n" +
     `• Pedido: ${orderId}\n` +
     `• Email: ${email}\n\n` +
-    "Está tudo correto? (sim/não)"
+    "Está tudo correto?"
   );
 }
 
@@ -182,6 +182,6 @@ export function formatSupportSummary(data: Record<string, unknown>): string {
     "Confira os dados do seu chamado:\n\n" +
     `• Problema: ${problem}\n` +
     `• Pedido: ${orderId}\n\n` +
-    "Está tudo correto? (sim/não)"
+    "Está tudo correto?"
   );
 }

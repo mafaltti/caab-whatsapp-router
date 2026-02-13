@@ -45,7 +45,7 @@ export const handleOfferPurchase: StepHandler = async (ctx) => {
   }
 
   return {
-    reply: "Gostaria de iniciar uma compra de certificado? Responda *sim* ou *não*.",
+    reply: "Desculpe, não entendi. Gostaria de iniciar uma compra de certificado?",
     nextStep: "offer_purchase",
   };
 };

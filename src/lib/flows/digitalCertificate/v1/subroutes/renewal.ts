@@ -131,7 +131,7 @@ export const handleConfirm: StepHandler = async (ctx) => {
   }
 
   return {
-    reply: "Por favor, responda *sim* para confirmar ou *não* para recomeçar.",
+    reply: "Desculpe, não entendi. Os dados estão corretos?",
     nextStep: "confirm",
   };
 };

@@ -43,7 +43,7 @@ export const handleAwaitingProblem: StepHandler = async (ctx) => {
     reply:
       `Entendo que você precisa de ajuda com *${summary}*.\n\n` +
       "Para melhor atendê-lo, posso transferir você para um atendente humano.\n\n" +
-      "Deseja falar com um atendente? (sim/não)",
+      "Deseja falar com um atendente?",
     nextStep: "awaiting_handoff",
     data: { problem, summary },
   };
@@ -79,7 +79,7 @@ export const handleAwaitingHandoff: StepHandler = async (ctx) => {
 
   // unclear
   return {
-    reply: "Por favor, responda sim ou não. Deseja falar com um atendente?",
+    reply: "Desculpe, não entendi. Deseja falar com um atendente?",
     nextStep: "awaiting_handoff",
   };
 };
