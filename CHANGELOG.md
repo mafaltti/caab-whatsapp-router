@@ -32,9 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Digital certificate purchase flow no longer asks each field twice — step transitions now set the next step's `_asked_*` flag so the user's first response is processed immediately. Also fixed in renewal subroute
 - Removed rigid "(sim/não)" hints from all confirmation prompts — conversation feels more natural now that LLM fallback handles any phrasing
 - `normalizeSpokenEmail()` no longer mangles emails containing "at", "ponto", or "dot" as substrings (e.g. "contato" → "cont@o") — replacements now use `\b` word boundaries
-- Stricter email validation rejects garbled audio transcriptions with short local/domain parts (e.g. "cont@o.com", "o@x.com")
+- Email validation no longer rejects short local parts (e.g. `ti@caab.org.br` was rejected because local part "ti" was < 3 chars) — removed overly strict minimum length on local part, kept domain length check
 - Email extraction from audio now suggests typing after failed attempt, since Whisper struggles with email dictation
 - Purchase confirmation now detects field name in rejection (e.g. "O e-mail está errado") and skips directly to correction instead of asking which field to fix
+- Field correction keyword matching now uses word boundaries — "O CPF está errado" no longer misroutes to person type (keyword "pf" was matching inside "cpf")
 
 ### Added (prior unreleased)
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`

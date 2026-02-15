@@ -24,9 +24,9 @@ export function isValidCpfCnpj(
 
 export function isValidEmail(email: string): boolean {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-  const [local, domain] = email.split("@");
-  // Reject garbled audio transcriptions (e.g. "cont@o.com", "o@x.com")
-  if (local.length < 3 || domain.length < 5) return false;
+  const [, domain] = email.split("@");
+  // Reject garbled audio transcriptions (e.g. "o@x.com")
+  if (domain.length < 5) return false;
   return true;
 }
 
