@@ -1,6 +1,6 @@
 # CAAB WhatsApp Router
 
-Webhook-driven WhatsApp assistant: Evolution API v2 + Supabase + Groq LLM + state machine.
+Webhook-driven WhatsApp assistant: Evolution API v2 + Supabase + multi-provider LLM (Groq/Mistral/Cerebras) + state machine.
 Next.js 15 (App Router) on Vercel, TypeScript, Zod v4.
 
 ## Commands
@@ -12,7 +12,7 @@ Next.js 15 (App Router) on Vercel, TypeScript, Zod v4.
 ## Key Directories
 - `src/app/api/webhook/evolution/` — webhook entry point (POST)
 - `src/lib/db/` — Supabase client, session + message repos, generated types
-- `src/lib/llm/` — Groq client, prompts, Zod schemas, routers, extractors
+- `src/lib/llm/` — LLM client (multi-provider), prompts, Zod schemas, routers, extractors
 - `src/lib/flows/` — flow engine, registry, per-flow definitions (unknown, digitalCertificate, billing, generalSupport)
 - `src/lib/routing/` — routeMessage orchestrator (load session → route → execute → persist → reply)
 - `src/lib/evolution/` — sendText client
@@ -52,10 +52,13 @@ NOT a static menu. Uses LLM in text mode (jsonMode: false) for natural conversat
 Skipped when active_flow is "unknown" — the unknown flow handles intent classification internally.
 
 ## LLM Conventions
-- **Provider**: Groq — **Model**: `openai/gpt-oss-120b` (see src/lib/llm/client.ts)
+- **Multi-provider**: Groq (default), Mistral, Cerebras — all via OpenAI-compatible API (`openai` npm package).
+- **Provider config**: `src/lib/llm/providers.ts` — per-provider base URL, model, key rotation.
+- **Task routing**: `src/lib/llm/taskRouter.ts` — `LLM_TASK_ROUTING` env var maps tasks to providers (e.g. `classify_flow=mistral`). Unset = all tasks use Groq.
+- **Default models**: Groq=`openai/gpt-oss-120b`, Mistral=`mistral-small-latest`, Cerebras=`llama-4-scout-17b-16e-instruct`. Override via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL`.
 - **JSON mode** (jsonMode: true): default. Responses validated with Zod before use.
 - **Text mode** (jsonMode: false): conversational replies only (unknown flow).
-- **Key rotation**: round-robin through GROQ_API_KEYS env var, auto-retry on 429.
+- **Key rotation**: per-provider round-robin, auto-retry on 429.
 - **Temperature**: 0 — **Max tokens**: 500 — **Timeout**: 8s
 - **On invalid JSON**: log error, fall back to "unknown" flow, ask user to rephrase.
 - Prompts: `src/lib/llm/prompts.ts` — Schemas: `src/lib/llm/schemas.ts`

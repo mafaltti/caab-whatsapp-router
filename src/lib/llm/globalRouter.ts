@@ -25,6 +25,7 @@ export async function classifyFlow(
       systemPrompt: globalRouterSystemPrompt(),
       userPrompt: globalRouterUserPrompt(text, chatHistory),
       correlationId,
+      task: "classify_flow",
     });
     rawContent = result.content;
   } catch (err) {

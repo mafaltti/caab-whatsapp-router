@@ -27,6 +27,7 @@ async function getConversationalReply(
       userPrompt: unknownConversationUserPrompt(text, chatHistory, turnCount),
       correlationId,
       jsonMode: false,
+      task: "conversational_reply",
     });
     return result.content.trim() || null;
   } catch (err) {

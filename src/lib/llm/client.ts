@@ -1,6 +1,11 @@
-import Groq from "groq-sdk";
-import { BadRequestError, RateLimitError } from "groq-sdk/error";
+import OpenAI from "openai";
 import { logger } from "@/lib/shared";
+import {
+  type ProviderId,
+  getProvider,
+  nextApiKey,
+} from "./providers";
+import { type LlmTask, getProviderForTask } from "./taskRouter";
 
 export class SafetyOverrideError extends Error {
   readonly failedGeneration: string;
@@ -12,26 +17,9 @@ export class SafetyOverrideError extends Error {
   }
 }
 
-const MODEL = "openai/gpt-oss-120b";
 const DEFAULT_MAX_TOKENS = 500;
 const DEFAULT_TEMPERATURE = 0;
 const TIMEOUT_MS = 8000;
-
-function getApiKeys(): string[] {
-  const raw = process.env.GROQ_API_KEYS;
-  if (!raw) throw new Error("Missing env var GROQ_API_KEYS");
-  const keys = raw.split(",").filter(Boolean);
-  if (keys.length === 0) throw new Error("GROQ_API_KEYS is empty");
-  return keys;
-}
-
-let keyIndex = 0;
-
-function nextKey(keys: string[]): string {
-  const key = keys[keyIndex % keys.length];
-  keyIndex = (keyIndex + 1) % keys.length;
-  return key;
-}
 
 export interface LlmCallOptions {
   systemPrompt: string;
@@ -40,13 +28,43 @@ export interface LlmCallOptions {
   maxTokens?: number;
   temperature?: number;
   jsonMode?: boolean;
+  provider?: ProviderId;
+  task?: LlmTask;
+  model?: string;
 }
 
 export interface LlmCallResult {
   content: string;
   durationMs: number;
   model: string;
+  provider: ProviderId;
   tokensUsed?: number;
+}
+
+function detectGroqSafetyOverride(err: unknown): string | null {
+  if (
+    err instanceof OpenAI.BadRequestError ||
+    (err instanceof OpenAI.APIError && err.status === 400)
+  ) {
+    const apiErr = err as InstanceType<typeof OpenAI.APIError> & {
+      error?: Record<string, unknown>;
+    };
+    const body = apiErr.error as Record<string, unknown> | undefined;
+    const inner = body?.error as Record<string, unknown> | undefined;
+    if (
+      inner?.code === "json_validate_failed" &&
+      typeof inner?.failed_generation === "string" &&
+      inner.failed_generation.length > 0
+    ) {
+      const isGroqError =
+        inner.failed_generation.includes("max completion tokens") ||
+        inner.failed_generation.includes("failed to generate");
+      if (!isGroqError) {
+        return inner.failed_generation;
+      }
+    }
+  }
+  return null;
 }
 
 export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
@@ -57,15 +75,22 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
     maxTokens = DEFAULT_MAX_TOKENS,
     temperature = DEFAULT_TEMPERATURE,
     jsonMode = true,
+    task,
+    model: modelOverride,
   } = options;
 
-  const keys = getApiKeys();
-  const maxAttempts = keys.length;
+  // Provider resolution: explicit > task-based > default ("groq")
+  const providerId = options.provider ?? getProviderForTask(task);
+  const provider = getProvider(providerId);
+  const model = modelOverride ?? provider.model;
+
+  const maxAttempts = provider.keys.length;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const apiKey = nextKey(keys);
-    const client = new Groq({
+    const apiKey = nextApiKey(provider);
+    const client = new OpenAI({
       apiKey,
+      baseURL: provider.baseURL,
       timeout: TIMEOUT_MS,
       maxRetries: 0,
     });
@@ -74,7 +99,7 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
 
     try {
       const response = await client.chat.completions.create({
-        model: MODEL,
+        model,
         temperature,
         max_tokens: maxTokens,
         ...(jsonMode && { response_format: { type: "json_object" as const } }),
@@ -91,54 +116,53 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
       logger.info({
         correlation_id: correlationId,
         event: "llm_call",
-        model: MODEL,
+        provider: providerId,
+        model,
         duration_ms: durationMs,
         tokens_used: tokensUsed,
       });
 
-      return { content, durationMs, model: MODEL, tokensUsed };
+      return { content, durationMs, model, provider: providerId, tokensUsed };
     } catch (err) {
       const durationMs = Math.round(performance.now() - start);
 
-      if (err instanceof RateLimitError && attempt < maxAttempts - 1) {
+      // Rate limit — retry with next key
+      if (
+        err instanceof OpenAI.APIError &&
+        err.status === 429 &&
+        attempt < maxAttempts - 1
+      ) {
         logger.warn({
           correlation_id: correlationId,
           event: "llm_rate_limited",
-          model: MODEL,
+          provider: providerId,
+          model,
           attempt: attempt + 1,
           duration_ms: durationMs,
         });
         continue;
       }
 
-      if (err instanceof BadRequestError) {
-        const body = err.error as Record<string, unknown> | undefined;
-        const inner = body?.error as Record<string, unknown> | undefined;
-        if (
-          inner?.code === "json_validate_failed" &&
-          typeof inner?.failed_generation === "string" &&
-          inner.failed_generation.length > 0
-        ) {
-          // Groq system error messages are not safety overrides
-          const isGroqError =
-            inner.failed_generation.includes("max completion tokens") ||
-            inner.failed_generation.includes("failed to generate");
-          if (!isGroqError) {
-            logger.info({
-              correlation_id: correlationId,
-              event: "llm_safety_override_detected",
-              model: MODEL,
-              duration_ms: durationMs,
-            });
-            throw new SafetyOverrideError(inner.failed_generation);
-          }
+      // Groq-specific safety override detection
+      if (providerId === "groq") {
+        const failedGen = detectGroqSafetyOverride(err);
+        if (failedGen) {
+          logger.info({
+            correlation_id: correlationId,
+            event: "llm_safety_override_detected",
+            provider: providerId,
+            model,
+            duration_ms: durationMs,
+          });
+          throw new SafetyOverrideError(failedGen);
         }
       }
 
       logger.error({
         correlation_id: correlationId,
         event: "llm_call_error",
-        model: MODEL,
+        provider: providerId,
+        model,
         duration_ms: durationMs,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -147,6 +171,5 @@ export async function callLlm(options: LlmCallOptions): Promise<LlmCallResult> {
     }
   }
 
-  // Should not reach here, but satisfy TypeScript
-  throw new Error("All Groq API keys exhausted");
+  throw new Error(`All ${providerId} API keys exhausted`);
 }

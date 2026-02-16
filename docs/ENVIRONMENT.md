@@ -35,9 +35,21 @@ EVOLUTION_BASE_URL=https://your-evolution-api.com
 EVOLUTION_API_KEY=your-evolution-api-key
 EVOLUTION_INSTANCE=your-instance-name
 
-# Groq API (comma-separated keys for rotation)
-# Create 3-5 free tier accounts for better rate limits
+# LLM Providers (comma-separated keys for rotation)
+# Groq is required; Mistral and Cerebras are optional
 GROQ_API_KEYS=gsk_key1,gsk_key2,gsk_key3
+# MISTRAL_API_KEYS=mk_key1,mk_key2
+# CEREBRAS_API_KEYS=ck_key1,ck_key2
+
+# Optional model overrides per provider
+# GROQ_MODEL=openai/gpt-oss-120b
+# MISTRAL_MODEL=mistral-small-latest
+# CEREBRAS_MODEL=llama-4-scout-17b-16e-instruct
+
+# Task-to-provider routing (comma-separated task=provider pairs)
+# Available tasks: classify_flow, classify_subroute, detect_topic_shift, extract_data, conversational_reply, summarize
+# Unspecified tasks default to groq
+# LLM_TASK_ROUTING=classify_flow=mistral,extract_data=cerebras
 
 # Optional Configuration
 WEBHOOK_SECRET=your-optional-webhook-secret

@@ -109,6 +109,7 @@ export async function detectTopicShift(
       systemPrompt: topicShiftSystemPrompt(),
       userPrompt: topicShiftUserPrompt(text, currentFlow, chatHistory),
       correlationId,
+      task: "detect_topic_shift",
     });
 
     let parsed: unknown;

@@ -21,6 +21,8 @@ export {
   SUBROUTE_CONFIG,
 } from "./schemas";
 export { callLlm, SafetyOverrideError, type LlmCallOptions, type LlmCallResult } from "./client";
+export { type ProviderId } from "./providers";
+export { type LlmTask } from "./taskRouter";
 export { classifyFlow, type ClassifyFlowResult } from "./globalRouter";
 export { detectTopicShift } from "./topicShift";
 export {
