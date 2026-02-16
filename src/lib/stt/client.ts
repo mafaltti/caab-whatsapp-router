@@ -1,6 +1,6 @@
-import Groq from "groq-sdk";
-import { RateLimitError, APIConnectionTimeoutError } from "groq-sdk/error";
+import OpenAI from "openai";
 import { logger } from "@/lib/shared";
+import { getProvider, nextApiKey } from "@/lib/llm/providers";
 
 const MODEL = "whisper-large-v3";
 const TIMEOUT_MS = 15000;
@@ -11,35 +11,20 @@ const TRANSCRIPTION_PROMPT =
   "(ex: 'contato arroba empresa ponto com' = contato@empresa.com), " +
   "números de CPF (ex: 123.456.789-00), CNPJ, ou telefones com DDD.";
 
-function getApiKeys(): string[] {
-  const raw = process.env.GROQ_API_KEYS;
-  if (!raw) throw new Error("Missing env var GROQ_API_KEYS");
-  const keys = raw.split(",").filter(Boolean);
-  if (keys.length === 0) throw new Error("GROQ_API_KEYS is empty");
-  return keys;
-}
-
-let keyIndex = 0;
-
-function nextKey(keys: string[]): string {
-  const key = keys[keyIndex % keys.length];
-  keyIndex = (keyIndex + 1) % keys.length;
-  return key;
-}
-
 export async function transcribeAudio(
   audioBuffer: Buffer,
   fileName: string,
   correlationId?: string,
 ): Promise<string> {
-  const keys = getApiKeys();
-  const maxAttempts = keys.length;
+  const provider = getProvider("groq");
+  const maxAttempts = provider.keys.length;
   let timeoutRetries = 0;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const apiKey = nextKey(keys);
-    const client = new Groq({
+    const apiKey = nextApiKey(provider);
+    const client = new OpenAI({
       apiKey,
+      baseURL: provider.baseURL,
       timeout: TIMEOUT_MS,
       maxRetries: 0,
     });
@@ -77,7 +62,12 @@ export async function transcribeAudio(
     } catch (err) {
       const durationMs = Math.round(performance.now() - start);
 
-      if (err instanceof RateLimitError && attempt < maxAttempts - 1) {
+      // Rate limit — retry with next key
+      if (
+        err instanceof OpenAI.APIError &&
+        err.status === 429 &&
+        attempt < maxAttempts - 1
+      ) {
         logger.warn({
           correlation_id: correlationId,
           event: "stt_rate_limited",
@@ -88,8 +78,9 @@ export async function transcribeAudio(
         continue;
       }
 
+      // Timeout — retry with same key rotation
       if (
-        err instanceof APIConnectionTimeoutError &&
+        err instanceof OpenAI.APIConnectionTimeoutError &&
         timeoutRetries < MAX_TIMEOUT_RETRIES
       ) {
         timeoutRetries++;

@@ -50,6 +50,7 @@ export async function classifySubroute(
       systemPrompt: subrouteRouterSystemPrompt(flow, subroutes),
       userPrompt: subrouteRouterUserPrompt(text, chatHistory),
       correlationId,
+      task: "classify_subroute",
     });
     rawContent = result.content;
   } catch (err) {

@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Multi-provider LLM support — Groq (default), Mistral, and Cerebras can now be used side-by-side via a unified OpenAI-compatible client (`openai` npm package replaces `groq-sdk`)
+- Provider configuration (`src/lib/llm/providers.ts`) with per-provider base URL, default model, and round-robin API key rotation
+- Task-based routing (`src/lib/llm/taskRouter.ts`) — `LLM_TASK_ROUTING` env var maps LLM tasks (classify_flow, extract_data, etc.) to providers; unspecified tasks default to Groq
+- Optional model overrides per provider via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL` env vars
+- `provider` field in `LlmCallResult` for observability — logs now include which provider handled each call
+- `task` field in `LlmCallOptions` — all 6 caller sites annotate their calls (classify_flow, classify_subroute, detect_topic_shift, extract_data, conversational_reply, summarize)
 - Audio message support (speech-to-text) — voice messages are now transcribed via Groq Whisper (`whisper-large-v3`) and fed into the existing message pipeline as text
 - Groq STT client (`src/lib/stt/`) with round-robin API key rotation and automatic retry on rate limits, reusing the same `GROQ_API_KEYS` env var
 - Whisper transcription prompt with context hints for emails (including spoken "arroba"/@, "ponto"/. patterns), CPFs, CNPJs, and phone numbers — improves accuracy for dictated structured data
@@ -18,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Spoken email normalization (`normalizeSpokenEmail`) — converts "arroba" → @, "ponto" → ., removes spaces for dictated email addresses
 
 ### Changed
+- LLM client (`src/lib/llm/client.ts`) and STT client (`src/lib/stt/client.ts`) migrated from `groq-sdk` to `openai` SDK with dynamic `baseURL` per provider
+- Rate limit detection changed from `instanceof RateLimitError` to universal `err.status === 429` (works across all OpenAI-compatible providers)
+- Groq-specific safety override detection (`json_validate_failed`) now isolated behind a provider check — only runs when `providerId === "groq"`
 - STT model upgraded from `whisper-large-v3-turbo` to `whisper-large-v3` for better transcription accuracy
 - Media auto-reply updated to mention audio is now supported ("texto ou áudio" instead of only "texto")
 - Audio messages no longer blocked by guards — they pass through with `requiresAudioTranscription` flag
@@ -36,6 +45,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Email extraction from audio now suggests typing after failed attempt, since Whisper struggles with email dictation
 - Purchase confirmation now detects field name in rejection (e.g. "O e-mail está errado") and skips directly to correction instead of asking which field to fix
 - Field correction keyword matching now uses word boundaries — "O CPF está errado" no longer misroutes to person type (keyword "pf" was matching inside "cpf")
+
+### Removed
+- `groq-sdk` dependency — replaced by `openai` SDK with Groq's OpenAI-compatible endpoint
 
 ### Added (prior unreleased)
 - Flow versioning — each `FlowDefinition` now carries `version` and `active` fields; registry is a flat array with module-load validation and env-driven rollback via `FLOW_VERSION_OVERRIDES`

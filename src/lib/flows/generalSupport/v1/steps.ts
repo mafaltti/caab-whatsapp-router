@@ -25,6 +25,7 @@ export const handleAwaitingProblem: StepHandler = async (ctx) => {
       correlationId: ctx.correlationId,
       jsonMode: false,
       maxTokens: 100,
+      task: "summarize",
     });
     summary = result.content.trim();
     if (!summary) {

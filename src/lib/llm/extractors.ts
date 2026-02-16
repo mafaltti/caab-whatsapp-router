@@ -59,6 +59,7 @@ async function extractWithLlm<T>(options: {
       userPrompt,
       correlationId,
       maxTokens: 200,
+      task: "extract_data",
     });
     rawContent = result.content;
   } catch (err) {
