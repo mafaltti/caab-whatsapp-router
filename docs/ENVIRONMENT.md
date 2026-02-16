@@ -51,6 +51,10 @@ GROQ_API_KEYS=gsk_key1,gsk_key2,gsk_key3
 # Unspecified tasks default to groq
 # LLM_TASK_ROUTING=classify_flow=mistral,extract_data=cerebras
 
+# STT (speech-to-text) provider: groq (default) or mistral
+# Groq uses whisper-large-v3; Mistral uses voxtral-mini-latest
+# STT_PROVIDER=groq
+
 # Optional Configuration
 WEBHOOK_SECRET=your-optional-webhook-secret
 LOG_LEVEL=debug

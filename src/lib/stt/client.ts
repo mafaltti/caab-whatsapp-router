@@ -1,22 +1,55 @@
 import OpenAI from "openai";
 import { logger } from "@/lib/shared";
 import { getProvider, nextApiKey } from "@/lib/llm/providers";
+import type { ProviderId } from "@/lib/llm/providers";
 
-const MODEL = "whisper-large-v3";
+export type SttProviderId = "groq" | "mistral";
+
 const TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_RETRIES = 1;
-const TRANSCRIPTION_PROMPT =
-  "Transcrição de conversa por WhatsApp. O usuário pode ditar: " +
-  "endereços de email falando 'arroba' para @ e 'ponto' para . " +
-  "(ex: 'contato arroba empresa ponto com' = contato@empresa.com), " +
-  "números de CPF (ex: 123.456.789-00), CNPJ, ou telefones com DDD.";
+
+const STT_CONFIG: Record<
+  SttProviderId,
+  {
+    model: string;
+    providerId: ProviderId;
+    extraParams: () => Record<string, unknown>;
+  }
+> = {
+  groq: {
+    model: "whisper-large-v3",
+    providerId: "groq",
+    extraParams: () => ({
+      prompt:
+        "Transcrição de conversa por WhatsApp. O usuário pode ditar: " +
+        "endereços de email falando 'arroba' para @ e 'ponto' para . " +
+        "(ex: 'contato arroba empresa ponto com' = contato@empresa.com), " +
+        "números de CPF (ex: 123.456.789-00), CNPJ, ou telefones com DDD.",
+    }),
+  },
+  mistral: {
+    model: "voxtral-mini-latest",
+    providerId: "mistral",
+    extraParams: () => ({
+      context_bias: "arroba,ponto,com,org,br,CPF,CNPJ,DDD",
+    }),
+  },
+};
+
+function getSttProvider(): SttProviderId {
+  const raw = process.env.STT_PROVIDER;
+  if (raw === "mistral") return "mistral";
+  return "groq";
+}
 
 export async function transcribeAudio(
   audioBuffer: Buffer,
   fileName: string,
   correlationId?: string,
 ): Promise<string> {
-  const provider = getProvider("groq");
+  const sttProviderId = getSttProvider();
+  const config = STT_CONFIG[sttProviderId];
+  const provider = getProvider(config.providerId);
   const maxAttempts = provider.keys.length;
   let timeoutRetries = 0;
 
@@ -42,10 +75,10 @@ export async function transcribeAudio(
 
       const transcription = await client.audio.transcriptions.create({
         file,
-        model: MODEL,
+        model: config.model,
         language: "pt",
         temperature: 0,
-        prompt: TRANSCRIPTION_PROMPT,
+        ...config.extraParams(),
       });
 
       const durationMs = Math.round(performance.now() - start);
@@ -53,7 +86,8 @@ export async function transcribeAudio(
       logger.info({
         correlation_id: correlationId,
         event: "stt_transcription",
-        model: MODEL,
+        stt_provider: sttProviderId,
+        model: config.model,
         duration_ms: durationMs,
         audio_size_bytes: audioBuffer.length,
       });
@@ -71,7 +105,8 @@ export async function transcribeAudio(
         logger.warn({
           correlation_id: correlationId,
           event: "stt_rate_limited",
-          model: MODEL,
+          stt_provider: sttProviderId,
+          model: config.model,
           attempt: attempt + 1,
           duration_ms: durationMs,
         });
@@ -87,7 +122,8 @@ export async function transcribeAudio(
         logger.warn({
           correlation_id: correlationId,
           event: "stt_timeout_retry",
-          model: MODEL,
+          stt_provider: sttProviderId,
+          model: config.model,
           attempt: timeoutRetries,
           duration_ms: durationMs,
         });
@@ -98,7 +134,8 @@ export async function transcribeAudio(
       logger.error({
         correlation_id: correlationId,
         event: "stt_transcription_error",
-        model: MODEL,
+        stt_provider: sttProviderId,
+        model: config.model,
         duration_ms: durationMs,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -107,5 +144,7 @@ export async function transcribeAudio(
     }
   }
 
-  throw new Error("All Groq API keys exhausted for STT");
+  throw new Error(
+    `All ${sttProviderId} API keys exhausted for STT`,
+  );
 }

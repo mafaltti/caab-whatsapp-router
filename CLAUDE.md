@@ -55,10 +55,11 @@ Skipped when active_flow is "unknown" — the unknown flow handles intent classi
 - **Multi-provider**: Groq (default), Mistral, Cerebras — all via OpenAI-compatible API (`openai` npm package).
 - **Provider config**: `src/lib/llm/providers.ts` — per-provider base URL, model, key rotation.
 - **Task routing**: `src/lib/llm/taskRouter.ts` — `LLM_TASK_ROUTING` env var maps tasks to providers (e.g. `classify_flow=mistral`). Unset = all tasks use Groq.
-- **Default models**: Groq=`openai/gpt-oss-120b`, Mistral=`mistral-small-latest`, Cerebras=`llama-4-scout-17b-16e-instruct`. Override via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL`.
+- **Default models**: Groq=`openai/gpt-oss-120b`, Mistral=`mistral-small-latest`, Cerebras=`gpt-oss-120b`. Override via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL`.
 - **JSON mode** (jsonMode: true): default. Responses validated with Zod before use.
 - **Text mode** (jsonMode: false): conversational replies only (unknown flow).
 - **Key rotation**: per-provider round-robin, auto-retry on 429.
+- **STT provider**: `STT_PROVIDER` env var — `groq` (default, Whisper `whisper-large-v3`) or `mistral` (Voxtral `voxtral-mini-latest`). Groq uses `prompt` for context hints; Mistral uses `context_bias`.
 - **Temperature**: 0 — **Max tokens**: 500 — **Timeout**: 8s
 - **On invalid JSON**: log error, fall back to "unknown" flow, ask user to rephrase.
 - Prompts: `src/lib/llm/prompts.ts` — Schemas: `src/lib/llm/schemas.ts`

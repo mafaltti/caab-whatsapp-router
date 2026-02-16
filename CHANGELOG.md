@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Mistral Voxtral STT (`voxtral-mini-latest`) as alternative to Groq Whisper — switch via `STT_PROVIDER=mistral` env var (default remains `groq`). Provider-specific context hints: Groq uses `prompt`, Mistral uses `context_bias`
 - Multi-provider LLM support — Groq (default), Mistral, and Cerebras can now be used side-by-side via a unified OpenAI-compatible client (`openai` npm package replaces `groq-sdk`)
 - Provider configuration (`src/lib/llm/providers.ts`) with per-provider base URL, default model, and round-robin API key rotation
 - Task-based routing (`src/lib/llm/taskRouter.ts`) — `LLM_TASK_ROUTING` env var maps LLM tasks (classify_flow, extract_data, etc.) to providers; unspecified tasks default to Groq
@@ -24,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Spoken email normalization (`normalizeSpokenEmail`) — converts "arroba" → @, "ponto" → ., removes spaces for dictated email addresses
 
 ### Changed
+- Cerebras default model updated from `llama-4-scout-17b-16e-instruct` (non-existent) to `gpt-oss-120b` — the only viable production model after Feb 16 deprecations
 - LLM client (`src/lib/llm/client.ts`) and STT client (`src/lib/stt/client.ts`) migrated from `groq-sdk` to `openai` SDK with dynamic `baseURL` per provider
 - Rate limit detection changed from `instanceof RateLimitError` to universal `err.status === 429` (works across all OpenAI-compatible providers)
 - Groq-specific safety override detection (`json_validate_failed`) now isolated behind a provider check — only runs when `providerId === "groq"`
