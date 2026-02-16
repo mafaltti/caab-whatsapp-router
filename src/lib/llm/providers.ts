@@ -32,7 +32,7 @@ const PROVIDER_DEFAULTS: Record<ProviderId, ProviderDefaults> = {
   },
   cerebras: {
     baseURL: "https://api.cerebras.ai/v1",
-    model: "llama-4-scout-17b-16e-instruct",
+    model: "gpt-oss-120b",
     keysEnv: "CEREBRAS_API_KEYS",
     modelEnv: "CEREBRAS_MODEL",
     required: false,

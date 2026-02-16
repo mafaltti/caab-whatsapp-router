@@ -1,1 +1,1 @@
-export { transcribeAudio } from "./client";
+export { transcribeAudio, type SttProviderId } from "./client";
