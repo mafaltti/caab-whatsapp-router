@@ -43,6 +43,7 @@ The LLM system supports three providers. By default, **all tasks use Groq**. You
 | **Groq** (default) | `openai/gpt-oss-120b` | `GROQ_MODEL` | Yes |
 | **Mistral** | `mistral-small-latest` | `MISTRAL_MODEL` | Yes |
 | **Cerebras** | `gpt-oss-120b` | `CEREBRAS_MODEL` | Yes |
+| **Mafaltti** (self-hosted) | `llama3.1:8b-instruct-q4_K_M` | `MAFALTTI_MODEL` | Self-hosted |
 
 ### LLM Tasks
 
@@ -70,6 +71,9 @@ LLM_TASK_ROUTING=classify_flow=mistral,classify_subroute=mistral,extract_data=ce
 
 # Route everything to Mistral
 LLM_TASK_ROUTING=classify_flow=mistral,classify_subroute=mistral,detect_topic_shift=mistral,extract_data=mistral,conversational_reply=mistral,summarize=mistral
+
+# Route conversational replies to self-hosted Mafaltti
+LLM_TASK_ROUTING=conversational_reply=mafaltti
 ```
 
 ### How to override models
@@ -92,6 +96,7 @@ CEREBRAS_MODEL=gpt-oss-120b
 - **Groq**: `GROQ_API_KEYS` (required)
 - **Mistral**: `MISTRAL_API_KEYS` (only needed if routing tasks to Mistral)
 - **Cerebras**: `CEREBRAS_API_KEYS` (only needed if routing tasks to Cerebras)
+- **Mafaltti**: `MAFALTTI_API_KEYS` (only needed if routing tasks to Mafaltti — self-hosted Llama 3.1 8B)
 
 All key env vars accept comma-separated values for round-robin rotation (e.g. `GROQ_API_KEYS=key1,key2,key3`).
 
@@ -106,6 +111,7 @@ All key env vars accept comma-separated values for round-robin rotation (e.g. `G
 GROQ_API_KEYS=gsk_key1,gsk_key2
 MISTRAL_API_KEYS=mk_key1,mk_key2
 CEREBRAS_API_KEYS=ck_key1,ck_key2
+MAFALTTI_API_KEYS=your-self-hosted-key
 
 # STT: groq (default) or mistral
 STT_PROVIDER=groq
@@ -117,6 +123,7 @@ LLM_TASK_ROUTING=classify_flow=mistral,extract_data=cerebras
 # GROQ_MODEL=openai/gpt-oss-120b
 # MISTRAL_MODEL=mistral-small-latest
 # CEREBRAS_MODEL=gpt-oss-120b
+# MAFALTTI_MODEL=llama3.1:8b-instruct-q4_K_M
 ```
 
 After any change, restart the dev server (`npm run dev`).

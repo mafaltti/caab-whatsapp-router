@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Self-hosted LLM provider "mafaltti" — Llama 3.1 8B on a private VM, configured as a 4th OpenAI-compatible provider. Route tasks via `LLM_TASK_ROUTING=conversational_reply=mafaltti`
 - Mistral Voxtral STT (`voxtral-mini-latest`) as alternative to Groq Whisper — switch via `STT_PROVIDER=mistral` env var (default remains `groq`). Provider-specific context hints: Groq uses `prompt`, Mistral uses `context_bias`
 - Multi-provider LLM support — Groq (default), Mistral, and Cerebras can now be used side-by-side via a unified OpenAI-compatible client (`openai` npm package replaces `groq-sdk`)
 - Provider configuration (`src/lib/llm/providers.ts`) with per-provider base URL, default model, and round-robin API key rotation

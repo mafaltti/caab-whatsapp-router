@@ -1,4 +1,4 @@
-export type ProviderId = "groq" | "mistral" | "cerebras";
+export type ProviderId = "groq" | "mistral" | "cerebras" | "mafaltti";
 
 export interface ProviderConfig {
   id: ProviderId;
@@ -35,6 +35,13 @@ const PROVIDER_DEFAULTS: Record<ProviderId, ProviderDefaults> = {
     model: "gpt-oss-120b",
     keysEnv: "CEREBRAS_API_KEYS",
     modelEnv: "CEREBRAS_MODEL",
+    required: false,
+  },
+  mafaltti: {
+    baseURL: "https://llm-arm02.danilocarneiro.com/v1",
+    model: "llama3.1:8b-instruct-q4_K_M",
+    keysEnv: "MAFALTTI_API_KEYS",
+    modelEnv: "MAFALTTI_MODEL",
     required: false,
   },
 };

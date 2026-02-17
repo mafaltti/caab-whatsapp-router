@@ -36,20 +36,22 @@ EVOLUTION_API_KEY=your-evolution-api-key
 EVOLUTION_INSTANCE=your-instance-name
 
 # LLM Providers (comma-separated keys for rotation)
-# Groq is required; Mistral and Cerebras are optional
+# Groq is required; Mistral, Cerebras, and Mafaltti are optional
 GROQ_API_KEYS=gsk_key1,gsk_key2,gsk_key3
 # MISTRAL_API_KEYS=mk_key1,mk_key2
 # CEREBRAS_API_KEYS=ck_key1,ck_key2
+# MAFALTTI_API_KEYS=your-self-hosted-key
 
 # Optional model overrides per provider
 # GROQ_MODEL=openai/gpt-oss-120b
 # MISTRAL_MODEL=mistral-small-latest
 # CEREBRAS_MODEL=llama-4-scout-17b-16e-instruct
+# MAFALTTI_MODEL=llama3.1:8b-instruct-q4_K_M
 
 # Task-to-provider routing (comma-separated task=provider pairs)
 # Available tasks: classify_flow, classify_subroute, detect_topic_shift, extract_data, conversational_reply, summarize
 # Unspecified tasks default to groq
-# LLM_TASK_ROUTING=classify_flow=mistral,extract_data=cerebras
+# LLM_TASK_ROUTING=classify_flow=mistral,extract_data=cerebras,conversational_reply=mafaltti
 
 # STT (speech-to-text) provider: groq (default) or mistral
 # Groq uses whisper-large-v3; Mistral uses voxtral-mini-latest

@@ -52,10 +52,10 @@ NOT a static menu. Uses LLM in text mode (jsonMode: false) for natural conversat
 Skipped when active_flow is "unknown" — the unknown flow handles intent classification internally.
 
 ## LLM Conventions
-- **Multi-provider**: Groq (default), Mistral, Cerebras — all via OpenAI-compatible API (`openai` npm package).
+- **Multi-provider**: Groq (default), Mistral, Cerebras, Mafaltti (self-hosted) — all via OpenAI-compatible API (`openai` npm package).
 - **Provider config**: `src/lib/llm/providers.ts` — per-provider base URL, model, key rotation.
 - **Task routing**: `src/lib/llm/taskRouter.ts` — `LLM_TASK_ROUTING` env var maps tasks to providers (e.g. `classify_flow=mistral`). Unset = all tasks use Groq.
-- **Default models**: Groq=`openai/gpt-oss-120b`, Mistral=`mistral-small-latest`, Cerebras=`gpt-oss-120b`. Override via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL`.
+- **Default models**: Groq=`openai/gpt-oss-120b`, Mistral=`mistral-small-latest`, Cerebras=`gpt-oss-120b`, Mafaltti=`llama3.1:8b-instruct-q4_K_M`. Override via `GROQ_MODEL`, `MISTRAL_MODEL`, `CEREBRAS_MODEL`, `MAFALTTI_MODEL`.
 - **JSON mode** (jsonMode: true): default. Responses validated with Zod before use.
 - **Text mode** (jsonMode: false): conversational replies only (unknown flow).
 - **Key rotation**: per-provider round-robin, auto-retry on 429.
